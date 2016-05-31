@@ -1,0 +1,27 @@
+<resources>
+    <string name="app_name">Indoor Navigation</string>
+    <string name="title_activity_main">Indoor Navigation</string>
+    <string name="title_activity_map">Karte</string>
+    <string name="title_activity_wifi">Wifi-Scanner</string>
+    <string name="title_activity_drone">Drohnensteuerung</string>
+    <string name="title_fragment_sqlite">Radiomap</string>
+
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+
+    <string name="action_settings">Settings</string>
+
+    <string name="drone_scanning">Scanning for devices</string>
+
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="rollright">rollRight</string>
+    <string name="roll_left">roll left</string>
+    <string name="back">Back</string>
+    <string name="forward">Forward</string>
+    <string name="yaw_right">Yaw Right</string>
+    <string name="emergency">Emergency</string>
+    <string name="take_off_land">Take off / Land</string>
+    <string name="picture">Picture</string>
+</resources>

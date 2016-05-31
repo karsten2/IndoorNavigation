@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_wifi"
+            android:icon="@drawable/ic_signal_wifi_4_bar_black_24dp"
+            android:title="@string/title_activity_wifi"/>
+        <item
+            android:id="@+id/nav_map"
+            android:icon="@drawable/ic_place_black_24dp"
+            android:title="@string/title_activity_map"/>
+        <item
+            android:id="@+id/nav_sqlite"
+            android:icon="@drawable/ic_database_black_48dp"
+            android:title="@string/title_fragment_sqlite"/>
+        <item
+            android:id="@+id/nav_drone"
+            android:icon="@drawable/ic_airplanemode_active_black_24dp"
+            android:title="@string/title_activity_drone"/>
+    </group>
+</menu>

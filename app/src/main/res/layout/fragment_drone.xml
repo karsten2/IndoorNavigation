@@ -1,0 +1,81 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.power.max.indoornavigation.Controller.Fragments.DroneFragment">
+
+
+    <com.parrot.sdksample.view.BebopVideoView
+        android:id="@+id/videoView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/batteryLabel" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/roll_left"
+        android:id="@+id/rollLeftBt"
+        android:layout_gravity="left|center_vertical" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/back"
+        android:id="@+id/backBt"
+        android:layout_gravity="center_horizontal|bottom" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/forward"
+        android:id="@+id/forwardBt"
+        android:layout_gravity="center_horizontal|top" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/rollright"
+        android:id="@+id/rollRightBt"
+        android:layout_gravity="right|center_vertical" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/yaw_right"
+        android:id="@+id/yawRightBt"
+        android:layout_gravity="right|top" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Yaw Left"
+        android:id="@+id/yawLeftBt"
+        android:layout_gravity="left|top" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/emergency"
+        android:id="@+id/emergencyBt"
+        android:layout_gravity="right|bottom" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/take_off_land"
+        android:id="@+id/takeOffOrLandBt"
+        android:layout_gravity="left|bottom" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/takePictureBt"
+        android:layout_gravity="center"
+        android:text="@string/picture" />
+
+</FrameLayout>
