@@ -21,8 +21,9 @@
     <string name="back">Back</string>
     <string name="forward">Forward</string>
     <string name="yaw_right">Yaw Right</string>
-    <string name="emergency">Emergency</string>
+    <string name="emergency">Emergency land</string>
     <string name="take_off_land">Take off / Land</string>
     <string name="picture">Picture</string>
     <string name="current_position">Current Position</string>
+    <string name="yaw_left">Yaw Left</string>
 </resources>

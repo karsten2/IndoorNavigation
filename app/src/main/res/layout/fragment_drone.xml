@@ -1,81 +1,124 @@
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout  xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context="com.power.max.indoornavigation.Controller.Fragments.DroneFragment">
 
-
-    <com.parrot.sdksample.view.BebopVideoView
+    <com.power.max.indoornavigation.Controller.Fragments.BebopVideoView
         android:id="@+id/videoView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        android:layout_height="match_parent" />
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:id="@+id/batteryLabel" />
 
-    <Button
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/roll_left"
-        android:id="@+id/rollLeftBt"
-        android:layout_gravity="left|center_vertical" />
+        android:layout_alignParentBottom="true">
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/back"
-        android:id="@+id/backBt"
-        android:layout_gravity="center_horizontal|bottom" />
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_horizontal">
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/forward"
-        android:id="@+id/forwardBt"
-        android:layout_gravity="center_horizontal|top" />
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+                <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/yaw_left"
+                    android:id="@+id/yawLeftBt"
+                    android:layout_alignParentStart="true"/>
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/rollright"
-        android:id="@+id/rollRightBt"
-        android:layout_gravity="right|center_vertical" />
+                <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/forward"
+                    android:id="@+id/forwardBt"
+                    android:layout_centerInParent="true"/>
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/yaw_right"
-        android:id="@+id/yawRightBt"
-        android:layout_gravity="right|top" />
+                <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/yaw_right"
+                    android:id="@+id/yawRightBt"
+                    android:layout_alignParentEnd="true"/>
+            </RelativeLayout>
+        </LinearLayout>
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Yaw Left"
-        android:id="@+id/yawLeftBt"
-        android:layout_gravity="left|top" />
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+                <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/roll_left"
+                    android:id="@+id/rollLeftBt"
+                    android:layout_alignParentStart="true"/>
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/emergency"
-        android:id="@+id/emergencyBt"
-        android:layout_gravity="right|bottom" />
+                <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/takePictureBt"
+                    android:layout_gravity="center"
+                    android:text="@string/picture"
+                    android:layout_centerInParent="true"/>
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/take_off_land"
-        android:id="@+id/takeOffOrLandBt"
-        android:layout_gravity="left|bottom" />
+                <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/rollright"
+                    android:id="@+id/rollRightBt"
+                    android:layout_alignParentEnd="true"/>
+            </RelativeLayout>
+        </LinearLayout>
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/takePictureBt"
-        android:layout_gravity="center"
-        android:text="@string/picture" />
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+                <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/take_off_land"
+                    android:id="@+id/takeOffOrLandBt"
+                    android:layout_alignParentStart="true"/>
 
-</FrameLayout>
+                <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/back"
+                    android:id="@+id/backBt"
+                    android:layout_centerInParent="true"/>
+            </RelativeLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" >
+
+            <Button
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="@string/emergency"
+                android:id="@+id/emergencyBt"
+                android:layout_weight="1"
+                android:background="#F44336"/>
+        </LinearLayout>
+    </LinearLayout>
+
+</RelativeLayout>

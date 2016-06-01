@@ -64,7 +64,7 @@ public class DroneFragment extends Fragment {
     @Override
     public void onPause() {
         super.onPause();
-//abc
+
         droneDiscoverer.stopDiscovering();
         droneDiscoverer.cleanup();
         droneDiscoverer.removeListener(mDiscovererListener);
@@ -99,23 +99,26 @@ public class DroneFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        droneDiscoverer = new DroneDiscoverer(getContext());
-        droneDiscoverer.setup();
-        droneDiscoverer.startDiscovering();
-        droneDiscoverer.addListener(mDiscovererListener);
-
-        initIHM();
-
-        Intent intent = getActivity().getIntent();
-        ARDiscoveryDeviceService service = intent.getParcelableExtra(TAG);
-        mBebopDrone = new BebopDrone(getContext(), service);
-        mBebopDrone.addListener(mBebopListener);
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_drone, container, false);
+
+        droneDiscoverer = new DroneDiscoverer(getContext());
+        droneDiscoverer.setup();
+        droneDiscoverer.startDiscovering();
+        droneDiscoverer.addListener(mDiscovererListener);
+
+        initIHM(view);
+
+        Intent intent = getActivity().getIntent();
+        ARDiscoveryDeviceService service = intent.getParcelableExtra(TAG);
+        if (service != null) {
+            mBebopDrone = new BebopDrone(getContext(), service);
+            mBebopDrone.addListener(mBebopListener);
+        }
 
         return view;
     }
@@ -147,16 +150,16 @@ public class DroneFragment extends Fragment {
         void onFragmentInteraction(Uri uri);
     }
 
-    private void initIHM() {
-        mVideoView = (BebopVideoView) getView().findViewById(R.id.videoView);
+    private void initIHM(View view) {
+        mVideoView = (BebopVideoView) view.findViewById(R.id.videoView);
 
-        getView().findViewById(R.id.emergencyBt).setOnClickListener(new View.OnClickListener() {
+        view.findViewById(R.id.emergencyBt).setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 mBebopDrone.emergency();
             }
         });
 
-        mTakeOffLandBt = (Button) getView().findViewById(R.id.takeOffOrLandBt);
+        mTakeOffLandBt = (Button) view.findViewById(R.id.takeOffOrLandBt);
         mTakeOffLandBt.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 switch (mBebopDrone.getFlyingState()) {
@@ -172,7 +175,7 @@ public class DroneFragment extends Fragment {
             }
         });
 
-        getView().findViewById(R.id.takePictureBt).setOnClickListener(new View.OnClickListener() {
+        view.findViewById(R.id.takePictureBt).setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 mBebopDrone.takePicture();
             }
@@ -244,7 +247,7 @@ public class DroneFragment extends Fragment {
             }
         });*/
 
-        getView().findViewById(R.id.yawLeftBt).setOnTouchListener(new View.OnTouchListener() {
+        view.findViewById(R.id.yawLeftBt).setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
@@ -267,7 +270,7 @@ public class DroneFragment extends Fragment {
             }
         });
 
-        getView().findViewById(R.id.yawRightBt).setOnTouchListener(new View.OnTouchListener() {
+        view.findViewById(R.id.yawRightBt).setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
@@ -290,7 +293,7 @@ public class DroneFragment extends Fragment {
             }
         });
 
-        getView().findViewById(R.id.forwardBt).setOnTouchListener(new View.OnTouchListener() {
+        view.findViewById(R.id.forwardBt).setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
@@ -315,7 +318,7 @@ public class DroneFragment extends Fragment {
             }
         });
 
-        getView().findViewById(R.id.backBt).setOnTouchListener(new View.OnTouchListener() {
+        view.findViewById(R.id.backBt).setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
@@ -340,7 +343,7 @@ public class DroneFragment extends Fragment {
             }
         });
 
-        getView().findViewById(R.id.rollLeftBt).setOnTouchListener(new View.OnTouchListener() {
+        view.findViewById(R.id.rollLeftBt).setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
@@ -365,7 +368,7 @@ public class DroneFragment extends Fragment {
             }
         });
 
-        getView().findViewById(R.id.rollRightBt).setOnTouchListener(new View.OnTouchListener() {
+        view.findViewById(R.id.rollRightBt).setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
@@ -390,7 +393,7 @@ public class DroneFragment extends Fragment {
             }
         });
 
-        mBatteryLabel = (TextView) getView().findViewById(R.id.batteryLabel);
+        mBatteryLabel = (TextView) view.findViewById(R.id.batteryLabel);
     }
 
     private final Listener mBebopListener = new Listener() {
