@@ -26,7 +26,8 @@ public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
         MapFragment.OnFragmentInteractionListener,
         WifiFragment.OnFragmentInteractionListener,
-        SqliteFragment.OnFragmentInteractionListener {
+        SqliteFragment.OnFragmentInteractionListener,
+        DroneFragment.OnFragmentInteractionListener {
 
     @Override
     public void onFragmentInteraction(Uri uri) {

@@ -6,6 +6,8 @@ import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.parrot.arsdk.arcommands.ARCOMMANDS_ARDRONE3_MEDIARECORDEVENT_PICTUREEVENTCHANGED_ERROR_ENUM;
+import com.parrot.arsdk.arcommands.ARCOMMANDS_ARDRONE3_NETWORKSTATE_WIFISCANLISTCHANGED_BAND_ENUM;
+import com.parrot.arsdk.arcommands.ARCOMMANDS_ARDRONE3_NETWORK_WIFISCAN_BAND_ENUM;
 import com.parrot.arsdk.arcommands.ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_ENUM;
 import com.parrot.arsdk.arcontroller.ARCONTROLLER_DEVICE_STATE_ENUM;
 import com.parrot.arsdk.arcontroller.ARCONTROLLER_DICTIONARY_KEY_ENUM;
@@ -30,8 +32,10 @@ import com.parrot.arsdk.ardiscovery.ARDiscoveryService;
 import com.parrot.arsdk.arutils.ARUtilsException;
 import com.parrot.arsdk.arutils.ARUtilsFtpConnection;
 import com.parrot.arsdk.arutils.ARUtilsManager;
+import com.power.max.indoornavigation.Model.BaseStation;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class BebopDrone {
@@ -103,6 +107,13 @@ public class BebopDrone {
          * @param mediaName the name of the media
          */
         void onDownloadComplete(String mediaName);
+
+        /**
+         * Called when list of wifi networks refreshed.
+         * Called in main thread.
+         * @param baseStations all found networks.
+         */
+        void onWifiScanListChanged(ArrayList<BaseStation> baseStations);
     }
 
     private final List<Listener> mListeners;
@@ -114,6 +125,7 @@ public class BebopDrone {
     private ARCONTROLLER_DEVICE_STATE_ENUM mState;
     private ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_ENUM mFlyingState;
     private String mCurrentRunId;
+    private ArrayList<BaseStation> mBaseStations = new ArrayList<>();
 
     public BebopDrone(Context context, @NonNull ARDiscoveryDeviceService deviceService) {
 
@@ -145,6 +157,37 @@ public class BebopDrone {
                 ftpQueueManager.initWifiFtp(productIP, DEVICE_PORT, ARUtilsFtpConnection.FTP_ANONYMOUS, "");
 
                 mSDCardModule = new SDCardModule(ftpListManager, ftpQueueManager);
+                SDCardModule.Listener mSDCardModuleListener = new SDCardModule.Listener() {
+                    @Override
+                    public void onMatchingMediasFound(final int nbMedias) {
+                        mHandler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                notifyMatchingMediasFound(nbMedias);
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onDownloadProgressed(final String mediaName, final int progress) {
+                        mHandler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                notifyDownloadProgressed(mediaName, progress);
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onDownloadComplete(final String mediaName) {
+                        mHandler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                notifyDownloadComplete(mediaName);
+                            }
+                        });
+                    }
+                };
                 mSDCardModule.addListener(mSDCardModuleListener);
             }
             catch (ARUtilsException e)
@@ -238,6 +281,15 @@ public class BebopDrone {
     public void takePicture() {
         if ((mDeviceController != null) && (mState.equals(ARCONTROLLER_DEVICE_STATE_ENUM.ARCONTROLLER_DEVICE_STATE_RUNNING))) {
             mDeviceController.getFeatureARDrone3().sendMediaRecordPictureV2();
+        }
+    }
+
+    public void scanWifi() {
+        ARCOMMANDS_ARDRONE3_NETWORK_WIFISCAN_BAND_ENUM band =
+                ARCOMMANDS_ARDRONE3_NETWORK_WIFISCAN_BAND_ENUM.ARCOMMANDS_ARDRONE3_NETWORK_WIFISCAN_BAND_ALL;
+
+        if (mDeviceController != null) {
+            mDeviceController.getFeatureARDrone3().sendNetworkWifiScan(band);
         }
     }
 
@@ -397,39 +449,14 @@ public class BebopDrone {
             listener.onDownloadComplete(mediaName);
         }
     }
+
+    private void notifyWifiScanListChanged(ArrayList<BaseStation> baseStations) {
+        List<Listener> listenersCpy = new ArrayList<>(mListeners);
+        for (Listener listener : listenersCpy) {
+            listener.onWifiScanListChanged(baseStations);
+        }
+    }
     //endregion notify listener block
-
-    private final SDCardModule.Listener mSDCardModuleListener = new SDCardModule.Listener() {
-        @Override
-        public void onMatchingMediasFound(final int nbMedias) {
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    notifyMatchingMediasFound(nbMedias);
-                }
-            });
-        }
-
-        @Override
-        public void onDownloadProgressed(final String mediaName, final int progress) {
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    notifyDownloadProgressed(mediaName, progress);
-                }
-            });
-        }
-
-        @Override
-        public void onDownloadComplete(final String mediaName) {
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    notifyDownloadComplete(mediaName);
-                }
-            });
-        }
-    };
 
     private final ARDeviceControllerListener mDeviceControllerListener = new ARDeviceControllerListener() {
         @Override
@@ -507,6 +534,34 @@ public class BebopDrone {
                         }
                     });
                 }
+            }
+
+            else if ((commandKey == ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_NETWORKSTATE_WIFISCANLISTCHANGED) && (elementDictionary != null)){
+                mBaseStations.clear();
+                for (ARControllerArgumentDictionary<Object> args : elementDictionary.values()) {
+                    if (args != null) {
+                        final String ssid = (String) args.get(ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_NETWORKSTATE_WIFISCANLISTCHANGED_SSID);
+                        final short rssi = (short) ((Integer) args.get(ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_NETWORKSTATE_WIFISCANLISTCHANGED_RSSI)).intValue();
+                        ARCOMMANDS_ARDRONE3_NETWORKSTATE_WIFISCANLISTCHANGED_BAND_ENUM band = ARCOMMANDS_ARDRONE3_NETWORKSTATE_WIFISCANLISTCHANGED_BAND_ENUM.getFromValue((Integer) args.get(ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_NETWORKSTATE_WIFISCANLISTCHANGED_BAND));
+                        final byte channel = (byte) ((Integer) args.get(ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_NETWORKSTATE_WIFISCANLISTCHANGED_CHANNEL)).intValue();
+                        mHandler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                BaseStation mBaseStation = new BaseStation();
+                                mBaseStation.setSsid(ssid);
+                                mBaseStation.setDistance(rssi);
+                                mBaseStation.setChannel(channel);
+                                mBaseStations.add(mBaseStation);
+                            }
+                        });
+                    }
+                }
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        notifyWifiScanListChanged(mBaseStations);
+                    }
+                });
             }
         }
     };
