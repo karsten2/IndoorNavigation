@@ -33,6 +33,6 @@ public class ApCursorAdapter extends CursorAdapter {
         tvESSID.setText(cursor.getString(
                 cursor.getColumnIndexOrThrow(DbTables.RadioMap.COL_SSID)));
         tvInfo.setText(cursor.getString(
-                cursor.getColumnIndexOrThrow(DbTables.RadioMap.COL_RSS)));
+                cursor.getColumnIndexOrThrow(DbTables.RadioMap.COL_BSSID)));
     }
 }

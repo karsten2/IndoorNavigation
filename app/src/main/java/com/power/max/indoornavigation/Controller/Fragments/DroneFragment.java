@@ -451,10 +451,10 @@ public class DroneFragment extends Fragment {
         public void onFrameReceived(ARFrame frame) {
             mVideoView.displayFrame(frame);
         }
-/*
+
         @Override
         public void onMatchingMediasFound(int nbMedias) {
-            mDownloadProgressDialog.dismiss();
+            /*mDownloadProgressDialog.dismiss();
 
             mNbMaxDownload = nbMedias;
             mCurrentDownloadIndex = 1;
@@ -475,23 +475,23 @@ public class DroneFragment extends Fragment {
                     }
                 });
                 mDownloadProgressDialog.show();
-            }
+            }*/
         }
 
         @Override
         public void onDownloadProgressed(String mediaName, int progress) {
-            mDownloadProgressDialog.setProgress(((mCurrentDownloadIndex - 1) * 100) + progress);
+            //mDownloadProgressDialog.setProgress(((mCurrentDownloadIndex - 1) * 100) + progress);
         }
 
         @Override
         public void onDownloadComplete(String mediaName) {
-            mCurrentDownloadIndex++;
+            /*mCurrentDownloadIndex++;
             mDownloadProgressDialog.setSecondaryProgress(mCurrentDownloadIndex * 100);
 
             if (mCurrentDownloadIndex > mNbMaxDownload) {
                 mDownloadProgressDialog.dismiss();
                 mDownloadProgressDialog = null;
-            }
-        }*/
+            }*/
+        }
     };
 }

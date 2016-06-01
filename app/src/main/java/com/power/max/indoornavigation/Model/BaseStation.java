@@ -1,25 +1,45 @@
 package com.power.max.indoornavigation.Model;
 
+import android.content.ContentValues;
+import android.net.wifi.ScanResult;
+
+import com.google.android.gms.maps.model.LatLng;
 import com.power.max.indoornavigation.Database.DbTables;
+
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Class that represents a base station in the database.
  */
-public class BaseStation {
+public class BaseStation implements Serializable {
     private String ssid, bssid, ip, mac;
     private int channel;
-    private Coordinate latLng;
+    private LatLng latLng;
     private double distance;
 
     public BaseStation() {}
 
-    public BaseStation(Coordinate latLng, double distance) {
+    public BaseStation(ScanResult scanResult, LatLng latLng) {
+        this.ssid = scanResult.SSID;
+        this.bssid = scanResult.BSSID;
+        this.mac = scanResult.BSSID;
+        this.latLng = latLng;
+    }
+
+    public BaseStation(LatLng latLng, double distance) {
         this.latLng = latLng;
         this.distance = distance;
     }
 
-    public BaseStation(String ssid, String bssid, String ip, String mac,
-                       int channel, Coordinate latLng) {
+    public BaseStation(String ssid,
+                       String bssid,
+                       String ip,
+                       String mac,
+                       int channel,
+                       LatLng latLng) {
+
         this.ssid = ssid;
         this.bssid = bssid;
         this.ip = ip;
@@ -28,11 +48,11 @@ public class BaseStation {
         this.latLng = latLng;
     }
 
-    public Coordinate getLatLng() {
+    public LatLng getLatLng() {
         return latLng;
     }
 
-    public void setLatLng(Coordinate latLng) {
+    public void setLatLng(LatLng latLng) {
         this.latLng = latLng;
     }
 
@@ -82,5 +102,21 @@ public class BaseStation {
 
     public void setChannel(int channel) {
         this.channel = channel;
+    }
+
+    /**
+     * Function to convert the class' values into a key->value set.
+     * Required for Sqlite Database insert.
+     * @return Key value pairs of type {@see ContentValues}.
+     */
+    public ContentValues toDbValues() {
+        ContentValues ret = new ContentValues();
+
+        ret.put(DbTables.RadioMap.COL_SSID, this.ssid);
+        ret.put(DbTables.RadioMap.COL_BSSID, this.bssid);
+        ret.put(DbTables.RadioMap.COL_LAT, this.latLng.latitude);
+        ret.put(DbTables.RadioMap.COL_LNG, this.latLng.longitude);
+
+        return ret;
     }
 }

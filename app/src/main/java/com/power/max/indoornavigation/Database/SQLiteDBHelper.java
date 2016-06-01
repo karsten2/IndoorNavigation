@@ -63,19 +63,12 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
      */
     public long sqlInsert(String tableName,
                           String columnNameNullable,
-                          Map<String, String> colValues) {
+                          ContentValues colValues) {
         long ret = -1;
 
         try {
             SQLiteDatabase db = this.getWritableDatabase();
-            ContentValues values = new ContentValues();
-
-            for (String key : colValues.keySet()) {
-                values.put(key, colValues.get(key));
-            }
-
-            ret = db.insert(tableName, columnNameNullable, values);
-
+            ret = db.insertOrThrow(tableName, columnNameNullable, colValues);
         } catch (SQLiteException e) {
             Log.e(TAG, "Error while inserting:\n" + e.getMessage());
         }

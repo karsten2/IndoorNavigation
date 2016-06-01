@@ -1,6 +1,9 @@
 package com.power.max.indoornavigation.Helper;
 
+import android.app.Activity;
+import android.app.ActivityManager;
 import android.content.Context;
+import android.content.Intent;
 import android.net.wifi.ScanResult;
 import android.os.Environment;
 import android.util.Log;
@@ -64,5 +67,44 @@ public abstract class Utils {
         }
 
         return new ArrayList<>();
+    }
+
+    /**
+     * Function to start a service.
+     * @param cls The service's class.
+     */
+    public static void startService(Class<?> cls, Activity activity) {
+        if (!serviceIsRunning(cls, activity)) {
+            activity.startService(new Intent(activity, cls));
+            Log.d("Utils Service", "Service Started");
+        }
+    }
+
+    /**
+     * Function to stop a service.
+     * @param cls The service's class.
+     */
+    public static void stopService(Class<?> cls, Activity activity) {
+        if (serviceIsRunning(cls, activity)) {
+            activity.stopService(new Intent(activity, cls));
+            Log.d("Utils Service", "Service Stopped");
+        }
+    }
+
+    /**
+     * Function to check if a Service is running.
+     * @param serviceClass The service's class.
+     * @return true if running, else false.
+     */
+    private static boolean serviceIsRunning(Class<?> serviceClass, Activity activity) {
+        ActivityManager manager =
+                (ActivityManager) activity.getSystemService(Context.ACTIVITY_SERVICE);
+
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

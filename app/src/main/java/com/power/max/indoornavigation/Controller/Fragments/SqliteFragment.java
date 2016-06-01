@@ -1,6 +1,5 @@
 package com.power.max.indoornavigation.Controller.Fragments;
 
-import android.app.ActivityManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -13,7 +12,7 @@ import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AlertDialog;
-import android.util.JsonWriter;
+
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -34,8 +33,6 @@ import com.power.max.indoornavigation.R;
 import com.power.max.indoornavigation.Services.WifiScanner;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 public class SqliteFragment extends Fragment {
 
@@ -88,30 +85,6 @@ public class SqliteFragment extends Fragment {
         btnGet.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                getTable();
-            }
-        });
-
-        Button btnAdd = (Button) view.findViewById(R.id.btnAdd);
-        btnAdd.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Map<String, String> values = new HashMap<>();
-                values.put(DbTables.RadioMap.COLUMN_NAME_TITLE, "Test");
-                values.put(DbTables.RadioMap.COL_SSID, "AP_1");
-                values.put(DbTables.RadioMap.COL_RSS, "10");
-                long id = dbHelper.sqlInsert(
-                        DbTables.RadioMap.TABLE_NAME,
-                        null,
-                        values);
-
-                if (id < 0) {
-                    Toast.makeText(
-                            getContext(), "Error while adding row", Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(
-                            getContext(), "Added row with id " + id, Toast.LENGTH_SHORT).show();
-                }
                 getTable();
             }
         });
@@ -195,7 +168,7 @@ public class SqliteFragment extends Fragment {
     private void dialog() {
 
         // start wifi service
-        startService(WifiScanner.class);
+        Utils.startService(WifiScanner.class, getActivity());
         wifiAdapter = new WifiAdapter(getActivity(), scanResults);
 
         final AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
@@ -221,7 +194,7 @@ public class SqliteFragment extends Fragment {
         builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
             @Override
             public void onDismiss(DialogInterface dialog) {
-                stopService(WifiScanner.class);
+                Utils.stopService(WifiScanner.class, getActivity());
             }
         });
 
@@ -249,21 +222,21 @@ public class SqliteFragment extends Fragment {
         super.onPause();
         getActivity().unregisterReceiver(broadcastReceiver);
 
-        stopService(WifiScanner.class);
+        Utils.stopService(WifiScanner.class, getActivity());
     }
 
     @Override
     public void onStop() {
         super.onStop();
 
-        stopService(WifiScanner.class);
+        Utils.stopService(WifiScanner.class, getActivity());
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
 
-        stopService(WifiScanner.class);
+        Utils.stopService(WifiScanner.class, getActivity());
         dbHelper.close();
     }
 
@@ -271,7 +244,7 @@ public class SqliteFragment extends Fragment {
     public void onDestroyView() {
         super.onDestroyView();
 
-        stopService(WifiScanner.class);
+        Utils.stopService(WifiScanner.class, getActivity());
 
         dbHelper.close();
     }
@@ -280,44 +253,5 @@ public class SqliteFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-    }
-
-    /**
-     * Function to start a service.
-     * @param cls The service's class.
-     */
-    private void startService(Class<?> cls) {
-        if (!serviceIsRunning(cls)) {
-            getActivity().startService(new Intent(getActivity(), cls));
-            Log.d(TAG, "Service Started");
-        }
-    }
-
-    /**
-     * Function to stop a service.
-     * @param cls The service's class.
-     */
-    private void stopService(Class<?> cls) {
-        if (serviceIsRunning(cls)) {
-            getActivity().stopService(new Intent(getActivity(), cls));
-            Log.d(TAG, "Service Stopped");
-        }
-    }
-
-    /**
-     * Function to check if a Service is running.
-     * @param serviceClass The service's class.
-     * @return true if running, else false.
-     */
-    private boolean serviceIsRunning(Class<?> serviceClass) {
-        ActivityManager manager =
-                (ActivityManager) getActivity().getSystemService(Context.ACTIVITY_SERVICE);
-
-        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-            if (serviceClass.getName().equals(service.service.getClassName())) {
-                return true;
-            }
-        }
-        return false;
     }
 }

@@ -3,6 +3,7 @@ package com.power.max.indoornavigation.Math;
 import android.annotation.SuppressLint;
 import android.util.Log;
 
+import com.google.android.gms.maps.model.LatLng;
 import com.power.max.indoornavigation.Model.BaseStation;
 import com.power.max.indoornavigation.Model.Coordinate;
 
@@ -28,11 +29,11 @@ public abstract class Lateration {
      */
     public static Coordinate calculatePosition(ArrayList<BaseStation> baseStations) {
 
-        baseStations.add(new BaseStation(new Coordinate( 3, 2), 2.5));
-        baseStations.add(new BaseStation(new Coordinate( -2, 3), 3.2));
-        baseStations.add(new BaseStation(new Coordinate( -3, -1), 4.8));
-        baseStations.add(new BaseStation(new Coordinate( 2, -1), 2.5));
-        baseStations.add(new BaseStation(new Coordinate( 0, 0), 3.5));
+        baseStations.add(new BaseStation(new LatLng( 3, 2), 2.5));
+        baseStations.add(new BaseStation(new LatLng( -2, 3), 3.2));
+        baseStations.add(new BaseStation(new LatLng( -3, -1), 4.8));
+        baseStations.add(new BaseStation(new LatLng( 2, -1), 2.5));
+        baseStations.add(new BaseStation(new LatLng( 0, 0), 3.5));
 
         Coordinate ret = new Coordinate();
 
@@ -89,11 +90,11 @@ public abstract class Lateration {
         double[][] ret = new double[baseStations.size() - 1][2];
 
         for (int i = 0; i < baseStations.size() - 1; i ++) {
-            ret[i][0] = baseStations.get(0).getLatLng().getLat()
-                    - baseStations.get(i + 1).getLatLng().getLat();
+            ret[i][0] = baseStations.get(0).getLatLng().latitude
+                    - baseStations.get(i + 1).getLatLng().latitude;
 
-            ret[i][1] = baseStations.get(0).getLatLng().getLng()
-                    - baseStations.get(i + 1).getLatLng().getLng();
+            ret[i][1] = baseStations.get(0).getLatLng().longitude
+                    - baseStations.get(i + 1).getLatLng().longitude;
         }
 
         return ret;
@@ -135,12 +136,12 @@ public abstract class Lateration {
         double[][] ret = new double[baseStations.size() - 1][1];
 
         for (int i = 0; i < baseStations.size() - 1; i ++) {
-            final double x1 = baseStations.get(0).getLatLng().getLat();
-            final double y1 = baseStations.get(0).getLatLng().getLng();
+            final double x1 = baseStations.get(0).getLatLng().latitude;
+            final double y1 = baseStations.get(0).getLatLng().longitude;
             final double D1 = baseStations.get(0).getDistance();
 
-            double xn = baseStations.get(i + 1).getLatLng().getLat();
-            double yn = baseStations.get(i + 1).getLatLng().getLng();
+            double xn = baseStations.get(i + 1).getLatLng().latitude;
+            double yn = baseStations.get(i + 1).getLatLng().longitude;
             double Dn = baseStations.get(i + 1).getDistance();
 
             ret[i][0] = 0.5 * (Math.pow(x1, 2) - Math.pow(xn, 2)
