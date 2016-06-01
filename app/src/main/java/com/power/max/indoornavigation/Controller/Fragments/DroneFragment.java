@@ -64,7 +64,7 @@ public class DroneFragment extends Fragment {
     @Override
     public void onPause() {
         super.onPause();
-
+//abc
         droneDiscoverer.stopDiscovering();
         droneDiscoverer.cleanup();
         droneDiscoverer.removeListener(mDiscovererListener);
