@@ -5,6 +5,7 @@
     <string name="title_activity_wifi">Wifi-Scanner</string>
     <string name="title_activity_drone">Drohnensteuerung</string>
     <string name="title_fragment_sqlite">Radiomap</string>
+    <string name="edit_route">Edit route</string>
 
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
@@ -26,4 +27,6 @@
     <string name="picture">Picture</string>
     <string name="current_position">Current Position</string>
     <string name="yaw_left">Yaw Left</string>
+    <string name="cancel">Cancel</string>
+    <string name="accept">Accept</string>
 </resources>

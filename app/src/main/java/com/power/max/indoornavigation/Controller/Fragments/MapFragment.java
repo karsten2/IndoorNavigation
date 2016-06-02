@@ -8,17 +8,21 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
-import android.graphics.drawable.Icon;
+import android.graphics.Color;
 import android.net.Uri;
 import android.net.wifi.ScanResult;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
-import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
@@ -29,13 +33,13 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolygonOptions;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.power.max.indoornavigation.Adapter.WifiAdapter;
 import com.power.max.indoornavigation.Database.DbTables;
 import com.power.max.indoornavigation.Database.SQLiteDBHelper;
@@ -50,14 +54,27 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     private final String TAG = "Map Fragment";
 
+    private FloatingActionButton fab;
+    private FloatingActionButton fabStart;
+
+    private MenuItem menuCancel;
+    private MenuItem menuAccept;
+    private MenuItem menuDelete;
+
     private WifiAdapter wifiAdapter;
     private ArrayList<ScanResult> scanResults = new ArrayList<>();
 
     private PolygonOptions indoorMock = new PolygonOptions();
     private GoogleMap mMap;
-    private ActionBar actionBar;
     private LatLng currentPosition;
-    private ArrayList<Marker> mapMarkers = new ArrayList<>();
+
+    private MarkerOptions startMarker;
+    private MarkerOptions stopMarker;
+    private MarkerOptions routeMarkerOpen;
+    private MarkerOptions routeMarkerDone;
+
+    private ArrayList<Marker> route = new ArrayList<>();
+    private boolean addRoute = false;
 
     private SQLiteDBHelper dbHelper;
 
@@ -75,6 +92,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 broadcastReceiver, new IntentFilter(WifiScanner.TAG));
 
         dbHelper = new SQLiteDBHelper(getContext());
+
+        setHasOptionsMenu(true);
     }
 
     @Override
@@ -83,11 +102,19 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         View view = inflater.inflate(R.layout.fragment_map, container, false);
 
-        FloatingActionButton fab = (FloatingActionButton) view.findViewById(R.id.fab);
+        fab = (FloatingActionButton) view.findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 dialog();
+            }
+        });
+
+        fabStart = (FloatingActionButton) view.findViewById(R.id.fabStart);
+        fabStart.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // TODO start navigation
             }
         });
 
@@ -96,6 +123,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         mapFragment.getMapAsync(this);
 
         return view;
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+        menuAccept = menu.findItem(R.id.action_accept);
+        menuCancel = menu.findItem(R.id.action_cancel);
+        menuDelete = menu.findItem(R.id.action_delete);
     }
 
     @Override
@@ -126,19 +161,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             }
         });
 
-        //final PolylineOptions polylineOptions = new PolylineOptions();
-
         mMap.setOnMarkerClickListener(onMarkerClickListener);
+        mMap.setOnMapClickListener(onMapClickListener);
 
-        mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
-            @Override
-            public void onMapClick(LatLng latLng) {
-                //polylineOptions.add(latLng);
-                //mMap.addPolyline(polylineOptions);
-                indoorMock.add(latLng);
-                mMap.addPolygon(indoorMock);
-            }
-        });
+        startMarker = new MarkerOptions().title("start").icon(
+                BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
+        stopMarker = new MarkerOptions().title("stop").icon(
+                BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
+        routeMarkerOpen = new MarkerOptions().icon(
+                BitmapDescriptorFactory.fromResource(R.drawable.ic_action_location_2));
+        routeMarkerDone = new MarkerOptions().icon(
+                BitmapDescriptorFactory.fromResource(R.drawable.ic_action_location_2_green));
 
         addMarkersToMap();
 
@@ -147,7 +180,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         LatLng latLng = new LatLng(START_LAT, START_LNG);
         CameraPosition cameraPosition = new CameraPosition.Builder().target(latLng).zoom(18.5f).build();
         CameraUpdate cameraUpdate = CameraUpdateFactory.newCameraPosition(cameraPosition);
-        mMap.addMarker(new MarkerOptions().position(latLng).title("Marker"));
         mMap.moveCamera(cameraUpdate);
 
         if (ActivityCompat.checkSelfPermission(getContext(),
@@ -162,12 +194,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     void addMarkersToMap() {
         for (BaseStation baseStation : getBaseStations()) {
-            Marker marker = mMap.addMarker(new MarkerOptions()
+            mMap.addMarker(new MarkerOptions()
                     .position(baseStation.getLatLng())
                     .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_router))
                     .title(baseStation.getSsid()));
-
-            mapMarkers.add(marker);
         }
     }
 
@@ -181,11 +211,40 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     marker.remove();
+                    dbHelper.sqlDelete(DbTables.RadioMap.TABLE_NAME,
+                            DbTables.RadioMap.COL_SSID + " = ?", new String[] {marker.getTitle()});
                 }
             });
             builder.setNegativeButton("Cancel", null);
             builder.show();
             return false;
+        }
+    };
+
+    GoogleMap.OnMapClickListener onMapClickListener = new GoogleMap.OnMapClickListener() {
+        @Override
+        public void onMapClick(LatLng latLng) {
+            if (addRoute) {
+                // add marker to array and draw marker on map.
+                if (route.size() == 0) {
+                    route.add(mMap.addMarker(startMarker.position(latLng).icon(
+                            BitmapDescriptorFactory.defaultMarker(
+                                    BitmapDescriptorFactory.HUE_GREEN))));
+                } else {
+                    LatLng old = route.get(route.size() - 1).getPosition();
+
+                    MarkerOptions markerOptions = new MarkerOptions()
+                            .position(latLng)
+                            .icon(BitmapDescriptorFactory.fromResource(
+                                    R.drawable.ic_action_location_2))
+                            .anchor(0.5f, 0.5f);
+
+                    route.add(mMap.addMarker(markerOptions));
+                    mMap.addPolyline(new PolylineOptions()
+                            .add(old, latLng)
+                            .color(Color.BLUE));
+                }
+            }
         }
     };
 
@@ -228,7 +287,21 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         builder.show();
     }
 
-    private void addRoute() {}
+    private void addRoute() {
+
+        setActionBarText(getString(R.string.edit_route));
+
+        addRoute = true;
+        fab.setVisibility(View.INVISIBLE);
+
+        if (menuAccept != null) menuAccept.setVisible(true);
+        if (menuCancel != null) menuCancel.setVisible(true);
+
+        if (getView() != null) {
+            Snackbar.make(
+                    getView(), "Tap on the map to create a route.", Snackbar.LENGTH_LONG).show();
+        }
+    }
 
     /**
      * Function to create a dialog box, that ist filled by all nearby wifi networks.
@@ -362,5 +435,54 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         super.onDestroyView();
 
         Utils.stopService(WifiScanner.class, getActivity());
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.action_cancel) {
+
+            if (menuAccept != null) menuAccept.setVisible(false);
+            if (menuCancel != null) menuCancel.setVisible(false);
+
+            mMap.clear();
+            route.clear();
+
+            fabStart.setVisibility(View.INVISIBLE);
+            fab.setVisibility(View.VISIBLE);
+
+            addRoute = false;
+
+        } else if (item.getItemId() == R.id.action_accept) {
+
+            if (menuAccept != null) menuAccept.setVisible(false);
+            if (menuCancel != null) menuCancel.setVisible(false);
+            if (menuDelete != null) menuDelete.setVisible(true);
+
+            fabStart.setVisibility(View.VISIBLE);
+            fab.setVisibility(View.INVISIBLE);
+
+            addRoute = false;
+
+        } else if (item.getItemId() == R.id.action_delete) {
+
+            menuDelete.setVisible(false);
+
+            mMap.clear();
+
+            fabStart.setVisibility(View.INVISIBLE);
+            fab.setVisibility(View.VISIBLE);
+
+            setActionBarText(getString(R.string.title_activity_main));
+
+            addRoute = false;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void setActionBarText(String text) {
+        if (((AppCompatActivity) getActivity()).getSupportActionBar() != null) {
+            ((AppCompatActivity) getActivity()).getSupportActionBar().setTitle(text);
+        }
     }
 }
