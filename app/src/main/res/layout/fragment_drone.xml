@@ -93,9 +93,10 @@
                 <Button
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/take_off_land"
-                    android:id="@+id/takeOffOrLandBt"
-                    android:layout_alignParentStart="true"/>
+                    android:text="@string/emergency"
+                    android:id="@+id/emergencyBt"
+                    android:layout_alignParentStart="true"
+                    android:background="#F44336" />
 
                 <Button
                     android:layout_width="wrap_content"
@@ -114,10 +115,9 @@
             <Button
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="@string/emergency"
-                android:id="@+id/emergencyBt"
-                android:layout_weight="1"
-                android:background="#F44336"/>
+                android:text="@string/take_off_land"
+                android:id="@+id/takeOffOrLandBt"
+                android:layout_weight="1"/>
         </LinearLayout>
     </LinearLayout>
 

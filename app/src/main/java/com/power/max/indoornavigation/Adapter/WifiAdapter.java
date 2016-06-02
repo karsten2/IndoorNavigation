@@ -34,7 +34,7 @@ public class WifiAdapter extends ArrayAdapter<ScanResult> {
         TextView tvInfo = (TextView) convertView.findViewById(R.id.txtInfo);
         // Populate the data into the template view using the data object
         tvESSID.setText(scanResult.SSID);
-        tvInfo.setText("Level: " + scanResult.level);
+        tvInfo.setText("Level: " + scanResult.level + " | " + scanResult.BSSID);
 
         return convertView;
     }

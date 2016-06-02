@@ -137,13 +137,17 @@ public class BebopDrone {
         mState = ARCONTROLLER_DEVICE_STATE_ENUM.ARCONTROLLER_DEVICE_STATE_STOPPED;
 
         // if the product type of the deviceService match with the types supported
-        ARDISCOVERY_PRODUCT_ENUM productType = ARDiscoveryService.getProductFromProductID(deviceService.getProductID());
+        ARDISCOVERY_PRODUCT_ENUM productType =
+                ARDiscoveryService.getProductFromProductID(deviceService.getProductID());
         ARDISCOVERY_PRODUCT_FAMILY_ENUM family = ARDiscoveryService.getProductFamily(productType);
         if (ARDISCOVERY_PRODUCT_FAMILY_ENUM.ARDISCOVERY_PRODUCT_FAMILY_ARDRONE.equals(family)) {
 
             ARDiscoveryDevice discoveryDevice = createDiscoveryDevice(deviceService, productType);
             if (discoveryDevice != null) {
                 mDeviceController = createDeviceController(discoveryDevice);
+                this.mFlyingState =
+                        ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_ENUM
+                                .ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_LANDED;
             }
 
             try

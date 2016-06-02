@@ -1,12 +1,18 @@
 package com.power.max.indoornavigation.Controller.Fragments;
 
 import android.app.ProgressDialog;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.IBinder;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -22,6 +28,8 @@ import com.parrot.arsdk.arcontroller.ARCONTROLLER_DEVICE_STATE_ENUM;
 import com.parrot.arsdk.arcontroller.ARControllerCodec;
 import com.parrot.arsdk.arcontroller.ARFrame;
 import com.parrot.arsdk.ardiscovery.ARDiscoveryDeviceService;
+import com.parrot.arsdk.ardiscovery.ARDiscoveryService;
+import com.parrot.arsdk.ardiscovery.receivers.ARDiscoveryServicesDevicesListUpdatedReceiver;
 import com.power.max.indoornavigation.Drone.BebopDrone;
 import com.power.max.indoornavigation.Drone.BebopDrone.Listener;
 import com.power.max.indoornavigation.Drone.DroneDiscoverer;
@@ -45,21 +53,39 @@ public class DroneFragment extends Fragment {
     private Button mTakeOffLandBt;
     private Button mDownloadBt;
 
+    private Handler handler = new Handler();
+    Runnable runnable = new Runnable() {
+        @Override
+        public void run() {
+            mBebopDrone.scanWifi();
+            handler.postDelayed(runnable, 5000);
+        }
+    };
+
     public final String TAG = "EXTRA_DEVICE_SERVICE";
 
-    private final DroneDiscoverer.Listener mDiscovererListener = new  DroneDiscoverer.Listener() {
+    private final DroneDiscoverer.Listener mDiscovererListener = new DroneDiscoverer.Listener() {
         @Override
-        public void onDronesListUpdated(List<ARDiscoveryDeviceService> _dronesList) {
-            dronesList = _dronesList;
+        public void onDronesListUpdated(List<ARDiscoveryDeviceService> dronesList) {
+            if (dronesList.size() > 0) {
+                ARDiscoveryDeviceService service = new ARDiscoveryDeviceService(
+                        dronesList.get(0).getName(),
+                        dronesList.get(0).getDevice(),
+                        dronesList.get(0).getProductID()
+                );
 
-            Intent intent = getActivity().getIntent();
-            ARDiscoveryDeviceService service = intent.getParcelableExtra("EXTRA_DEVICE_SERVICE");
-            if (service != null) {
                 mBebopDrone = new BebopDrone(getContext(), service);
                 mBebopDrone.addListener(mBebopListener);
+                if (mBebopDrone.connect()) {
+                    runnable.run();
+                }
+
+                Log.d("drone", "drone found" + dronesList.get(0).getName());
             }
         }
     };
+
+
 
     @Override
     public void onPause() {
@@ -76,24 +102,7 @@ public class DroneFragment extends Fragment {
         ARSDK.loadSDKLibs();
     }
 
-    public DroneFragment() {
-        // Required empty public constructor
-    }
-
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment DroneFragment.
-     */
-    public static DroneFragment newInstance(String param1, String param2) {
-        DroneFragment fragment = new DroneFragment();
-        Bundle args = new Bundle();
-
-        return fragment;
-    }
+    public DroneFragment() { }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -108,17 +117,18 @@ public class DroneFragment extends Fragment {
 
         droneDiscoverer = new DroneDiscoverer(getContext());
         droneDiscoverer.setup();
-        droneDiscoverer.startDiscovering();
         droneDiscoverer.addListener(mDiscovererListener);
+        droneDiscoverer.startDiscovering();
 
         initIHM(view);
 
+        /*
         Intent intent = getActivity().getIntent();
         ARDiscoveryDeviceService service = intent.getParcelableExtra(TAG);
         if (service != null) {
             mBebopDrone = new BebopDrone(getContext(), service);
             mBebopDrone.addListener(mBebopListener);
-        }
+        }*/
 
         return view;
     }
@@ -402,12 +412,13 @@ public class DroneFragment extends Fragment {
             switch (state)
             {
                 case ARCONTROLLER_DEVICE_STATE_RUNNING:
-                    //mConnectionProgressDialog.dismiss();
+                    Log.d("drone", "connected");
                     break;
 
                 case ARCONTROLLER_DEVICE_STATE_STOPPED:
                     // if the deviceController is stopped, go back to the previous activity
                     //mConnectionProgressDialog.dismiss();
+                    Log.d("drone", "connected");
                     getActivity().finish();
                     break;
 
@@ -418,6 +429,7 @@ public class DroneFragment extends Fragment {
 
         @Override
         public void onBatteryChargeChanged(int batteryPercentage) {
+            Log.d("drone", "Battery: " + batteryPercentage);
             mBatteryLabel.setText(String.format("%d%%", batteryPercentage));
         }
 
@@ -427,17 +439,14 @@ public class DroneFragment extends Fragment {
                 case ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_LANDED:
                     mTakeOffLandBt.setText("Take off");
                     mTakeOffLandBt.setEnabled(true);
-                    mDownloadBt.setEnabled(true);
                     break;
                 case ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_FLYING:
                 case ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_HOVERING:
                     mTakeOffLandBt.setText("Land");
                     mTakeOffLandBt.setEnabled(true);
-                    mDownloadBt.setEnabled(false);
                     break;
                 default:
                     mTakeOffLandBt.setEnabled(false);
-                    mDownloadBt.setEnabled(false);
             }
         }
 
@@ -469,7 +478,7 @@ public class DroneFragment extends Fragment {
         @Override
         public void onWifiScanListChanged(ArrayList<BaseStation> baseStations) {
             // TODO find base stations in Database
-
+            Log.d("drone", "wifi found: " + baseStations.size());
             // TODO find position
 
         }
