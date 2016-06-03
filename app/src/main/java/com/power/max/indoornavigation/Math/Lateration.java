@@ -5,7 +5,6 @@ import android.util.Log;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.power.max.indoornavigation.Model.BaseStation;
-import com.power.max.indoornavigation.Model.Coordinate;
 
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.DecompositionSolver;
@@ -27,21 +26,15 @@ public abstract class Lateration {
      * @param baseStations Fix base stations with coordinates and distance.
      * @return Calculated coordinates.
      */
-    public static Coordinate calculatePosition(ArrayList<BaseStation> baseStations) {
+    public static LatLng calculatePosition(ArrayList<BaseStation> baseStations) {
 
-        baseStations.add(new BaseStation(new LatLng( 3, 2), 2.5));
-        baseStations.add(new BaseStation(new LatLng( -2, 3), 3.2));
-        baseStations.add(new BaseStation(new LatLng( -3, -1), 4.8));
-        baseStations.add(new BaseStation(new LatLng( 2, -1), 2.5));
-        baseStations.add(new BaseStation(new LatLng( 0, 0), 3.5));
-
-        Coordinate ret = new Coordinate();
+        LatLng ret = new LatLng(0, 0);
 
         // At least 3 base stations are required.
-        if (baseStations.size() < 3)
-            throw new IllegalArgumentException("At least 3 base stations are required.");
-        else {
-            try {
+        /*if /*(baseStations.size() < 3)
+            //throw new IllegalArgumentException("At least 3 base stations are required.");
+        else */{
+         if (true)   try {
                 /**
                  * Formula for least squares method:
                  *      |xe|
@@ -65,10 +58,10 @@ public abstract class Lateration {
                 // Multiply pseudo inverse of A with b
                 double[][] resMatrix = multiplyByMatrix(aPseudoInv, b);
 
-                ret = new Coordinate(resMatrix);
+                ret = new LatLng(resMatrix[0][0], resMatrix[0][1]);
 
             } catch (IllegalArgumentException e) {
-                Log.e(TAG, e.getMessage());
+                //Log.e(TAG, e.getMessage());
             }
         }
 

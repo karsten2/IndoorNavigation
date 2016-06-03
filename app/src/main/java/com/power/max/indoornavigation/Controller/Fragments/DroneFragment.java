@@ -1,18 +1,11 @@
 package com.power.max.indoornavigation.Controller.Fragments;
 
-import android.app.ProgressDialog;
-import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.ServiceConnection;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.IBinder;
 import android.support.v4.app.Fragment;
-import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -21,6 +14,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 
+import com.google.android.gms.maps.model.LatLng;
 import com.parrot.arsdk.ARSDK;
 import com.parrot.arsdk.arcommands.ARCOMMANDS_ARDRONE3_MEDIARECORDEVENT_PICTUREEVENTCHANGED_ERROR_ENUM;
 import com.parrot.arsdk.arcommands.ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_ENUM;
@@ -28,12 +22,12 @@ import com.parrot.arsdk.arcontroller.ARCONTROLLER_DEVICE_STATE_ENUM;
 import com.parrot.arsdk.arcontroller.ARControllerCodec;
 import com.parrot.arsdk.arcontroller.ARFrame;
 import com.parrot.arsdk.ardiscovery.ARDiscoveryDeviceService;
-import com.parrot.arsdk.ardiscovery.ARDiscoveryService;
-import com.parrot.arsdk.ardiscovery.receivers.ARDiscoveryServicesDevicesListUpdatedReceiver;
+import com.power.max.indoornavigation.Database.DbTables;
+import com.power.max.indoornavigation.Database.SQLiteDBHelper;
 import com.power.max.indoornavigation.Drone.BebopDrone;
 import com.power.max.indoornavigation.Drone.BebopDrone.Listener;
 import com.power.max.indoornavigation.Drone.DroneDiscoverer;
-import com.power.max.indoornavigation.Helper.Utils;
+import com.power.max.indoornavigation.Math.Lateration;
 import com.power.max.indoornavigation.Model.BaseStation;
 import com.power.max.indoornavigation.R;
 
@@ -52,6 +46,9 @@ public class DroneFragment extends Fragment {
     private TextView mBatteryLabel;
     private Button mTakeOffLandBt;
     private Button mDownloadBt;
+    private Button mMoveByBt;
+
+    private SQLiteDBHelper db;
 
     private Handler handler = new Handler();
     Runnable runnable = new Runnable() {
@@ -62,7 +59,7 @@ public class DroneFragment extends Fragment {
         }
     };
 
-    public final String TAG = "EXTRA_DEVICE_SERVICE";
+    public final String TAG = "DroneFragment";
 
     private final DroneDiscoverer.Listener mDiscovererListener = new DroneDiscoverer.Listener() {
         @Override
@@ -115,20 +112,14 @@ public class DroneFragment extends Fragment {
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_drone, container, false);
 
+        db = new SQLiteDBHelper(getContext());
+
         droneDiscoverer = new DroneDiscoverer(getContext());
         droneDiscoverer.setup();
         droneDiscoverer.addListener(mDiscovererListener);
         droneDiscoverer.startDiscovering();
 
         initIHM(view);
-
-        /*
-        Intent intent = getActivity().getIntent();
-        ARDiscoveryDeviceService service = intent.getParcelableExtra(TAG);
-        if (service != null) {
-            mBebopDrone = new BebopDrone(getContext(), service);
-            mBebopDrone.addListener(mBebopListener);
-        }*/
 
         return view;
     }
@@ -175,6 +166,7 @@ public class DroneFragment extends Fragment {
                 switch (mBebopDrone.getFlyingState()) {
                     case ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_LANDED:
                         mBebopDrone.takeOff();
+                        mBebopDrone.calibrateMagnetometer((byte)1);
                         break;
                     case ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_FLYING:
                     case ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_HOVERING:
@@ -182,6 +174,15 @@ public class DroneFragment extends Fragment {
                         break;
                     default:
                 }
+            }
+        });
+
+
+        mMoveByBt = (Button) view.findViewById(R.id.moveByBt);
+        mMoveByBt.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mBebopDrone.moveBy(1.0, 1.0, 0.0, 90);
             }
         });
 
@@ -201,7 +202,7 @@ public class DroneFragment extends Fragment {
                 mDownloadProgressDialog.setIndeterminate(true);
                 mDownloadProgressDialog.setMessage("Fetching medias");
                 mDownloadProgressDialog.setCancelable(false);
-                mDownloadProgressDialog.setButton(DialogInterface.BUTTON_NEGATIVE, "Cancel", new DialogInterface.OnClickListener() {
+                 mDownloadProgressDialog.setButton(DialogInterface.BUTTON_NEGATIVE, "Cancel", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         mBebopDrone.cancelGetLastFlightMedias();
@@ -408,6 +409,18 @@ public class DroneFragment extends Fragment {
 
     private final Listener mBebopListener = new Listener() {
         @Override
+        public void onAttitudeChanged(float roll, float pitch, float yaw) {
+
+            roll = (float) ((float) roll * (180 / Math.PI));
+            pitch = (float) ((float) pitch * (180 / Math.PI));
+            yaw = (float) ((float) yaw * (180 / Math.PI));
+
+            Log.d(TAG, "\n roll: " + roll
+            + "\n pitch: " + pitch
+            + "\n yaw: " + yaw);
+        }
+
+        @Override
         public void onDroneConnectionChanged(ARCONTROLLER_DEVICE_STATE_ENUM state) {
             switch (state)
             {
@@ -477,10 +490,61 @@ public class DroneFragment extends Fragment {
 
         @Override
         public void onWifiScanListChanged(ArrayList<BaseStation> baseStations) {
-            // TODO find base stations in Database
-            Log.d("drone", "wifi found: " + baseStations.size());
-            // TODO find position
+            /*ArrayList<BaseStation> foundBaseSations = new ArrayList<>();
 
+            // find base stations in database.
+            for (BaseStation bs : baseStations) {
+                Cursor c = db.sqlSelect(
+                        DbTables.RadioMap.TABLE_NAME,
+                        null,
+                        DbTables.RadioMap.COL_SSID + " = ?",
+                        new String[] { bs.getSsid() },
+                        null, null, null
+                );
+                foundBaseSations.addAll(getCursorData(c));
+            }
+
+            // laterate Position.
+            try {
+                LatLng calcPosition = Lateration.calculatePosition(foundBaseSations);
+                Log.d("drone",
+                        "\nwifi found: " + baseStations.size()
+                                + "\nwifi in db found: " + foundBaseSations.size()
+                                + "\ncalculated Position: " + calcPosition.toString());
+            } catch (Exception e) {
+                Log.e(TAG, e.getMessage());
+                Log.d("drone",
+                        "\nwifi found: " + baseStations.size()
+                                + "\nwifi in db found: " + foundBaseSations.size());
+            }*/
+        }
+
+        /**
+         * Function to get data from database cursor.
+         * @param cursor from Database.
+         * @return List with all BaseStations from Database.
+         */
+        public ArrayList<BaseStation> getCursorData(Cursor cursor) {
+            ArrayList<BaseStation> ret = new ArrayList<>();
+
+            if (cursor != null) {
+                if (cursor.moveToFirst()) {
+                    do {
+                        try {
+                            BaseStation bs = new BaseStation();
+                            bs.setSsid(cursor.getString(cursor.getColumnIndex(DbTables.RadioMap.COL_SSID)));
+                            bs.setLatLng(new LatLng(
+                                    cursor.getDouble(cursor.getColumnIndex(DbTables.RadioMap.COL_LAT)),
+                                    cursor.getDouble(cursor.getColumnIndex(DbTables.RadioMap.COL_LNG))
+                            ));
+                            ret.add(bs);
+                        } catch (Exception e) {
+                            Log.e(TAG, e.getMessage());
+                        }
+                    } while (cursor.moveToFirst());
+                }
+            }
+            return ret;
         }
     };
 }

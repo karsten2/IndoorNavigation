@@ -9,6 +9,7 @@ import com.parrot.arsdk.arcommands.ARCOMMANDS_ARDRONE3_MEDIARECORDEVENT_PICTUREE
 import com.parrot.arsdk.arcommands.ARCOMMANDS_ARDRONE3_NETWORKSTATE_WIFISCANLISTCHANGED_BAND_ENUM;
 import com.parrot.arsdk.arcommands.ARCOMMANDS_ARDRONE3_NETWORK_WIFISCAN_BAND_ENUM;
 import com.parrot.arsdk.arcommands.ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_ENUM;
+import com.parrot.arsdk.arcommands.ARCOMMANDS_COMMON_COMMONSTATE_SENSORSSTATESLISTCHANGED_SENSORNAME_ENUM;
 import com.parrot.arsdk.arcontroller.ARCONTROLLER_DEVICE_STATE_ENUM;
 import com.parrot.arsdk.arcontroller.ARCONTROLLER_DICTIONARY_KEY_ENUM;
 import com.parrot.arsdk.arcontroller.ARCONTROLLER_ERROR_ENUM;
@@ -114,6 +115,8 @@ public class BebopDrone {
          * @param baseStations all found networks.
          */
         void onWifiScanListChanged(ArrayList<BaseStation> baseStations);
+
+        void onAttitudeChanged(float roll, float pitch, float yaw);
     }
 
     private final List<Listener> mListeners;
@@ -126,6 +129,10 @@ public class BebopDrone {
     private ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_ENUM mFlyingState;
     private String mCurrentRunId;
     private ArrayList<BaseStation> mBaseStations = new ArrayList<>();
+
+    private float mRoll = -1;
+    private float mPitch = -1;
+    private float mYaw = -1;
 
     public BebopDrone(Context context, @NonNull ARDiscoveryDeviceService deviceService) {
 
@@ -298,6 +305,34 @@ public class BebopDrone {
     }
 
     /**
+     * Start or abort magnetometer calibration.
+     *
+     * Triggers events
+     *      MagnetoCalibrationStateChanged
+     *
+     * @param calibrate 1 to start, 0 to abort.
+     */
+    public void calibrateMagnetometer(byte calibrate) {
+        if ((mDeviceController != null) && (mState.equals(ARCONTROLLER_DEVICE_STATE_ENUM.ARCONTROLLER_DEVICE_STATE_RUNNING))) {
+            mDeviceController.getFeatureCommon().sendCalibrationMagnetoCalibration((byte)calibrate);
+        }
+    }
+
+    /**
+     * Move the drone to a relative position and rotate heading by a given angle.
+     *
+     * @param dX Wanted displacement along the front axis.
+     * @param dY Wanted displacement along the right axis.
+     * @param dZ Wanted displacement along the down axis.
+     * @param dPsi Wanted rotation of heading.
+     */
+    public void moveBy(double dX, double dY, double dZ, double dPsi) {
+        if ((mDeviceController != null) && (mState.equals(ARCONTROLLER_DEVICE_STATE_ENUM.ARCONTROLLER_DEVICE_STATE_RUNNING))) {
+            mDeviceController.getFeatureARDrone3().sendPilotingMoveBy((float)dX, (float)dY, (float)dZ, (float)dPsi);
+        }
+    }
+
+    /**
      * Set the forward/backward angle of the drone
      * Note that {@link BebopDrone#setFlag(byte)} should be set to 1 in order to take in account the pitch value
      * @param pitch value in percentage from -100 to 100
@@ -460,6 +495,15 @@ public class BebopDrone {
             listener.onWifiScanListChanged(baseStations);
         }
     }
+
+    private void notifyAttitudeChanged(float roll, float pitch, float yaw) {
+        List<Listener> listenersCpy = new ArrayList<>(mListeners);
+        for (Listener listener : listenersCpy) {
+            listener.onAttitudeChanged(roll, pitch, yaw);
+        }
+    }
+
+
     //endregion notify listener block
 
     private final ARDeviceControllerListener mDeviceControllerListener = new ARDeviceControllerListener() {
@@ -566,6 +610,21 @@ public class BebopDrone {
                         notifyWifiScanListChanged(mBaseStations);
                     }
                 });
+            }
+
+            else if ((commandKey == ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_ATTITUDECHANGED) && (elementDictionary != null)){
+                ARControllerArgumentDictionary<Object> args = elementDictionary.get(ARControllerDictionary.ARCONTROLLER_DICTIONARY_SINGLE_KEY);
+                if (args != null) {
+                    final float roll = (float)((Double)args.get(ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_ATTITUDECHANGED_ROLL)).doubleValue();
+                    final float pitch = (float)((Double)args.get(ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_ATTITUDECHANGED_PITCH)).doubleValue();
+                    final float yaw = (float)((Double)args.get(ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_ATTITUDECHANGED_YAW)).doubleValue();
+                    mHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            notifyAttitudeChanged(roll, pitch, yaw);
+                        }
+                    });
+                }
             }
         }
     };

@@ -1,12 +1,16 @@
 package com.power.max.indoornavigation.Model;
 
 import android.content.ContentValues;
+import android.database.Cursor;
 import android.net.wifi.ScanResult;
+import android.util.Log;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.power.max.indoornavigation.Database.DbTables;
 
 import java.io.Serializable;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,6 +22,8 @@ public class BaseStation implements Serializable {
     private int channel;
     private LatLng latLng;
     private double distance;
+
+    private static final String TAG = "BaseStation";
 
     public BaseStation() {}
 
