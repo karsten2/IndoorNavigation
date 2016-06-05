@@ -38,7 +38,6 @@ public class DroneFragment extends Fragment {
 
     private OnFragmentInteractionListener mListener;
     private DroneDiscoverer droneDiscoverer;
-    private List<ARDiscoveryDeviceService> dronesList;
     private BebopDrone mBebopDrone;
 
     private BebopVideoView mVideoView;
@@ -46,7 +45,6 @@ public class DroneFragment extends Fragment {
     private TextView mBatteryLabel;
     private Button mTakeOffLandBt;
     private Button mDownloadBt;
-    private Button mMoveByBt;
 
     private SQLiteDBHelper db;
 
@@ -82,7 +80,12 @@ public class DroneFragment extends Fragment {
         }
     };
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
 
+        db.close();
+    }
 
     @Override
     public void onPause() {
@@ -177,86 +180,11 @@ public class DroneFragment extends Fragment {
             }
         });
 
-
-        mMoveByBt = (Button) view.findViewById(R.id.moveByBt);
-        mMoveByBt.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mBebopDrone.moveBy(1.0, 1.0, 0.0, 90);
-            }
-        });
-
         view.findViewById(R.id.takePictureBt).setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 mBebopDrone.takePicture();
             }
         });
-
-        /*mDownloadBt = (Button)findViewById(R.id.downloadBt);
-        mDownloadBt.setEnabled(false);
-        mDownloadBt.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                mBebopDrone.getLastFlightMedias();
-
-                mDownloadProgressDialog = new ProgressDialog(BebopActivity.this, R.style.AppCompatAlertDialogStyle);
-                mDownloadProgressDialog.setIndeterminate(true);
-                mDownloadProgressDialog.setMessage("Fetching medias");
-                mDownloadProgressDialog.setCancelable(false);
-                 mDownloadProgressDialog.setButton(DialogInterface.BUTTON_NEGATIVE, "Cancel", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        mBebopDrone.cancelGetLastFlightMedias();
-                    }
-                });
-                mDownloadProgressDialog.show();
-            }
-        });*/
-
-        /*getView().findViewById(R.id.gazUpBt).setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                        v.setPressed(true);
-                        mBebopDrone.setGaz((byte) 50);
-                        break;
-
-                    case MotionEvent.ACTION_UP:
-                        v.setPressed(false);
-                        mBebopDrone.setGaz((byte) 0);
-                        break;
-
-                    default:
-
-                        break;
-                }
-
-                return true;
-            }
-        });
-
-        getView().findViewById(R.id.gazDownBt).setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                        v.setPressed(true);
-                        mBebopDrone.setGaz((byte) -50);
-                        break;
-
-                    case MotionEvent.ACTION_UP:
-                        v.setPressed(false);
-                        mBebopDrone.setGaz((byte) 0);
-                        break;
-
-                    default:
-
-                        break;
-                }
-
-                return true;
-            }
-        });*/
 
         view.findViewById(R.id.yawLeftBt).setOnTouchListener(new View.OnTouchListener() {
             @Override
@@ -411,13 +339,9 @@ public class DroneFragment extends Fragment {
         @Override
         public void onAttitudeChanged(float roll, float pitch, float yaw) {
 
-            roll = (float) ((float) roll * (180 / Math.PI));
-            pitch = (float) ((float) pitch * (180 / Math.PI));
-            yaw = (float) ((float) yaw * (180 / Math.PI));
-
-            Log.d(TAG, "\n roll: " + roll
-            + "\n pitch: " + pitch
-            + "\n yaw: " + yaw);
+            Log.d(TAG, "\n roll: " + radToDeg(roll)
+            + "\n pitch: " + radToDeg(pitch)
+            + "\n yaw: " + radToDeg(yaw));
         }
 
         @Override
@@ -547,4 +471,8 @@ public class DroneFragment extends Fragment {
             return ret;
         }
     };
+
+    private float radToDeg(float value) {
+        return (float) (value * (180 / Math.PI));
+    }
 }

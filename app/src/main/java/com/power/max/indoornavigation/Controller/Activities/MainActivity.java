@@ -19,6 +19,7 @@ import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
@@ -29,10 +30,10 @@ public class MainActivity extends AppCompatActivity
         SqliteFragment.OnFragmentInteractionListener,
         DroneFragment.OnFragmentInteractionListener {
 
-    @Override
-    public void onFragmentInteraction(Uri uri) {
+    private static final String TAG = "MainActivity";
 
-    }
+    @Override
+    public void onFragmentInteraction(Uri uri) { }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,17 +45,28 @@ public class MainActivity extends AppCompatActivity
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-        drawer.addDrawerListener(toggle);
+        if (drawer != null) drawer.addDrawerListener(toggle);
         toggle.syncState();
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
-        navigationView.setNavigationItemSelectedListener(this);
+        if (navigationView != null) navigationView.setNavigationItemSelectedListener(this);
+
+        // Connect to drone, if possible.
+
+
+        // Open Map.
+        /*try {
+            FragmentManager fragmentManager = getSupportFragmentManager();
+            fragmentManager.beginTransaction().replace(R.id.flContent, MapFragment.class.newInstance()).commit();
+        } catch (InstantiationException | IllegalAccessException e) {
+            Log.e(TAG, e.getMessage());
+        }*/
     }
 
     @Override
     public void onBackPressed() {
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        if (drawer.isDrawerOpen(GravityCompat.START)) {
+        if (drawer != null && drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
         } else {
             // Dialog to make sure, the user wants to close the app.
@@ -122,8 +134,6 @@ public class MainActivity extends AppCompatActivity
 
             FragmentManager fragmentManager = getSupportFragmentManager();
             fragmentManager.beginTransaction().replace(R.id.flContent, fragment).commit();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
         } catch (Exception e) {
             e.printStackTrace();
         }

@@ -11,4 +11,11 @@
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
     tools:context=".Controller.Activities.MainActivity"
     tools:showIn="@layout/app_bar_main">
+
+    <ProgressBar
+        style="?android:attr/progressBarStyleLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/progressBar"
+        android:layout_centerInParent="true" />
 </RelativeLayout>
