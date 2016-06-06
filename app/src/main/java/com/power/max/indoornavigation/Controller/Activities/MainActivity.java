@@ -55,12 +55,13 @@ public class MainActivity extends AppCompatActivity
 
 
         // Open Map.
-        /*try {
+        try {
             FragmentManager fragmentManager = getSupportFragmentManager();
-            fragmentManager.beginTransaction().replace(R.id.flContent, MapFragment.class.newInstance()).commit();
+            fragmentManager.beginTransaction().replace(
+                    R.id.flContent, MapFragment.class.newInstance()).commit();
         } catch (InstantiationException | IllegalAccessException e) {
             Log.e(TAG, e.getMessage());
-        }*/
+        }
     }
 
     @Override
@@ -111,7 +112,6 @@ public class MainActivity extends AppCompatActivity
      * @param item Menu item.
      * @return true false.
      */
-    @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
         int id = item.getItemId();
@@ -139,7 +139,9 @@ public class MainActivity extends AppCompatActivity
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        drawer.closeDrawer(GravityCompat.START);
+        if (drawer != null) {
+            drawer.closeDrawer(GravityCompat.START);
+        }
         return true;
     }
 }

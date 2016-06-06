@@ -25,6 +25,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -33,12 +34,14 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolygonOptions;
+import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.power.max.indoornavigation.Adapter.WifiAdapter;
 import com.power.max.indoornavigation.Database.DbTables;
@@ -68,13 +71,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private GoogleMap mMap;
     private LatLng currentPosition;
 
-    private MarkerOptions startMarker;
-    private MarkerOptions stopMarker;
-    private MarkerOptions routeMarkerOpen;
-    private MarkerOptions routeMarkerDone;
-
     private ArrayList<Marker> route = new ArrayList<>();
+    private ArrayList<Polyline> polylines = new ArrayList<>();
     private boolean addRoute = false;
+
+    private BitmapDescriptor iconStart, iconRoute;
 
     private SQLiteDBHelper dbHelper;
 
@@ -102,6 +103,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         View view = inflater.inflate(R.layout.fragment_map, container, false);
 
+        iconStart = BitmapDescriptorFactory.fromResource(R.drawable.ic_action_location_lgreen);
+        iconRoute = BitmapDescriptorFactory.fromResource(R.drawable.ic_action_location_2_black);
+
         fab = (FloatingActionButton) view.findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -114,7 +118,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         fabStart.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // TODO start navigation
+                startAutonomousFlight();
             }
         });
 
@@ -152,6 +156,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
+
+        // make progress bar invisible
+        ProgressBar progressBar = (ProgressBar) getActivity().findViewById(R.id.progressBar);
+        if (progressBar != null) {
+            progressBar.setVisibility(View.INVISIBLE);
+        }
+
         mMap = googleMap;
         mMap.setOnCameraChangeListener(new GoogleMap.OnCameraChangeListener() {
             @Override
@@ -163,17 +174,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         mMap.setOnMarkerClickListener(onMarkerClickListener);
         mMap.setOnMapClickListener(onMapClickListener);
+        mMap.setOnMarkerDragListener(onMarkerDragListener);
 
-        startMarker = new MarkerOptions().title("start").icon(
-                BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
-        stopMarker = new MarkerOptions().title("stop").icon(
-                BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
-        routeMarkerOpen = new MarkerOptions().icon(
-                BitmapDescriptorFactory.fromResource(R.drawable.ic_action_location_2));
-        routeMarkerDone = new MarkerOptions().icon(
-                BitmapDescriptorFactory.fromResource(R.drawable.ic_action_location_2_green));
-
-        addMarkersToMap();
+        drawAccessPoints();
 
         double START_LAT = 54.33901533;
         double START_LNG = 13.07454586;
@@ -192,14 +195,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         mMap.setMyLocationEnabled(true);
     }
 
-    void addMarkersToMap() {
-        for (BaseStation baseStation : getBaseStations()) {
-            mMap.addMarker(new MarkerOptions()
-                    .position(baseStation.getLatLng())
-                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_router))
-                    .title(baseStation.getSsid()));
-        }
-    }
 
     GoogleMap.OnMarkerClickListener onMarkerClickListener = new GoogleMap.OnMarkerClickListener() {
         @Override
@@ -210,9 +205,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
-                    marker.remove();
-                    dbHelper.sqlDelete(DbTables.RadioMap.TABLE_NAME,
-                            DbTables.RadioMap.COL_SSID + " = ?", new String[] {marker.getTitle()});
+                    deleteMarker(marker);
                 }
             });
             builder.setNegativeButton("Cancel", null);
@@ -227,26 +220,148 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             if (addRoute) {
                 // add marker to array and draw marker on map.
                 if (route.size() == 0) {
-                    route.add(mMap.addMarker(startMarker.position(latLng).icon(
-                            BitmapDescriptorFactory.defaultMarker(
-                                    BitmapDescriptorFactory.HUE_GREEN))));
+                    route.add(mMap.addMarker(new MarkerOptions()
+                            .position(latLng)
+                            .icon(iconStart)
+                            .draggable(true)));
                 } else {
                     LatLng old = route.get(route.size() - 1).getPosition();
 
                     MarkerOptions markerOptions = new MarkerOptions()
                             .position(latLng)
-                            .icon(BitmapDescriptorFactory.fromResource(
-                                    R.drawable.ic_action_location_2))
-                            .anchor(0.5f, 0.5f);
+                            .icon(iconRoute)
+                            .anchor(0.5f, 0.5f)
+                            .draggable(true);
 
                     route.add(mMap.addMarker(markerOptions));
-                    mMap.addPolyline(new PolylineOptions()
+                    polylines.add(mMap.addPolyline(new PolylineOptions()
                             .add(old, latLng)
-                            .color(Color.BLUE));
+                            .color(Color.BLACK)
+                            .width(4.0f)));
                 }
             }
         }
     };
+
+    GoogleMap.OnMarkerDragListener onMarkerDragListener = new GoogleMap.OnMarkerDragListener() {
+        @Override
+        public void onMarkerDragStart(Marker marker) { }
+
+        @Override
+        public void onMarkerDrag(Marker marker) { updateRoute(marker); }
+
+        @Override
+        public void onMarkerDragEnd(Marker marker) { }
+    };
+
+    private void deleteMarker(Marker marker) {
+        marker.remove();
+        dbHelper.sqlDelete(DbTables.RadioMap.TABLE_NAME,
+                DbTables.RadioMap.COL_SSID + " = ?", new String[] {marker.getTitle()});
+
+        // replace two polylines with one new.
+        if (route.contains(marker)) {
+
+            if (route.indexOf(marker) == 0 && polylines.size() > 0) {
+                polylines.get(0).remove();
+                polylines.remove(polylines.get(0));
+            } else if (route.indexOf(marker) == route.size() - 1  && polylines.size() > 0) {
+                polylines.get(polylines.size() - 1).remove();
+                polylines.remove(polylines.size() - 1);
+            } else if (polylines.size() > 0) {
+                int firstLineIndex = route.indexOf(marker) - 1;
+                int secondLineIndex = firstLineIndex + 1;
+
+                if (firstLineIndex >= 0 && secondLineIndex >= 0
+                        && firstLineIndex < polylines.size() && secondLineIndex < polylines.size()) {
+
+                    Polyline firstLine = polylines.get(firstLineIndex);
+                    Polyline secondLine = polylines.get(secondLineIndex);
+
+                    // remove from map.
+                    firstLine.remove();
+                    secondLine.remove();
+
+                    // replace first line with new line.
+                    polylines.set(firstLineIndex, mMap.addPolyline(new PolylineOptions()
+                            .add(firstLine.getPoints().get(0), secondLine.getPoints().get(1))
+                            .width(4.0f)));
+
+                    // remove seconde line from array.
+                    polylines.remove(secondLine);
+                }
+            }
+
+            // remove marker from route.
+            route.remove(marker);
+        }
+    }
+
+    /**
+     * Draws all items in array route onto the map.
+     * The markers in the array have to be replaced by the new ones, since google map does only
+     * accept MarkerOptions to add.
+     */
+    private void drawRoute() {
+        for (Marker marker : route) {
+            marker.remove();
+            route.set(route.indexOf(marker),
+                    mMap.addMarker(new MarkerOptions()
+                            .position(marker.getPosition())
+                            .icon(route.indexOf(marker) == 0 ? iconStart : iconRoute)
+                            .anchor(0.5f, 0.5f)
+                            .draggable(true)));
+        }
+    }
+
+    private void drawAccessPoints() {
+        for (BaseStation baseStation : getBaseStations()) {
+            mMap.addMarker(new MarkerOptions()
+                    .position(baseStation.getLatLng())
+                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_router))
+                    .title(baseStation.getSsid()));
+        }
+    }
+
+    private void updateRoute(Marker marker) {
+        int markerPosition = route.indexOf(marker);
+
+        if (markerPosition == 0) {
+            Polyline polyline = polylines.get(0);
+            if (polyline != null) {
+                polyline.remove();
+                polylines.set(0, mMap.addPolyline(new PolylineOptions()
+                    .add(marker.getPosition(), polyline.getPoints().get(1))
+                    .width(4.0f)));
+            }
+        } else if (markerPosition == route.size() - 1) {
+            Polyline polyline = polylines.get(polylines.size() - 1);
+            if (polyline != null) {
+                polyline.remove();
+                polylines.set(polylines.size() - 1, mMap.addPolyline(new PolylineOptions()
+                        .add(polyline.getPoints().get(0), marker.getPosition())
+                        .width(4.0f)));
+            }
+        } else {
+            int firstLineIndex = route.indexOf(marker) - 1;
+            int secondLineIndex = firstLineIndex + 1;
+
+            if (firstLineIndex >= 0 && secondLineIndex >= 0
+                    && firstLineIndex < polylines.size() && secondLineIndex < polylines.size()) {
+                Polyline firstLine = polylines.get(firstLineIndex);
+                firstLine.remove();
+                polylines.set(firstLineIndex, mMap.addPolyline(new PolylineOptions()
+                        .add(firstLine.getPoints().get(0), marker.getPosition())
+                        .width(4.0f)));
+
+                Polyline secondLine = polylines.get(secondLineIndex);
+                secondLine.remove();
+                polylines.set(secondLineIndex, mMap.addPolyline(new PolylineOptions()
+                        .add(marker.getPosition(), secondLine.getPoints().get(1))
+                        .width(4.0f)));
+            }
+        }
+    }
 
     void setStatus(String text) {
         if (getView() != null) {
@@ -323,7 +438,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         addToDb(new BaseStation(wifiAdapter.getItem(which), currentPosition));
-                        addMarkersToMap();
+                        drawAccessPoints();
                     }
                 });
 
@@ -444,13 +559,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             if (menuAccept != null) menuAccept.setVisible(false);
             if (menuCancel != null) menuCancel.setVisible(false);
 
-            mMap.clear();
-            route.clear();
-
             fabStart.setVisibility(View.INVISIBLE);
             fab.setVisibility(View.VISIBLE);
 
             addRoute = false;
+
+            clearMap();
 
         } else if (item.getItemId() == R.id.action_accept) {
 
@@ -467,22 +581,32 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
             menuDelete.setVisible(false);
 
-            mMap.clear();
-
             fabStart.setVisibility(View.INVISIBLE);
             fab.setVisibility(View.VISIBLE);
 
             setActionBarText(getString(R.string.title_activity_main));
 
             addRoute = false;
+
+            clearMap();
         }
 
         return super.onOptionsItemSelected(item);
     }
 
+    private void clearMap() {
+        route.clear();
+        polylines.clear();
+        mMap.clear();
+    }
+
     private void setActionBarText(String text) {
-        if (((AppCompatActivity) getActivity()).getSupportActionBar() != null) {
+        if (((AppCompatActivity) getActivity()).getSupportActionBar() != null)
             ((AppCompatActivity) getActivity()).getSupportActionBar().setTitle(text);
-        }
+    }
+
+    private void startAutonomousFlight() {
+        // TODO Pass route and drone object
+
     }
 }
