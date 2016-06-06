@@ -339,15 +339,11 @@ public class DroneFragment extends Fragment {
         @Override
         public void onAttitudeChanged(float roll, float pitch, float yaw) {
 
-            Log.d(TAG, "\n roll: " + radToDeg(roll)
-            + "\n pitch: " + radToDeg(pitch)
-            + "\n yaw: " + radToDeg(yaw));
         }
 
         @Override
         public void onDroneConnectionChanged(ARCONTROLLER_DEVICE_STATE_ENUM state) {
-            switch (state)
-            {
+            switch (state) {
                 case ARCONTROLLER_DEVICE_STATE_RUNNING:
                     Log.d("drone", "connected");
                     break;
@@ -404,75 +400,26 @@ public class DroneFragment extends Fragment {
         }
 
         @Override
-        public void onMatchingMediasFound(int nbMedias) { }
+        public void onMatchingMediasFound(int nbMedias) {
+        }
 
         @Override
-        public void onDownloadProgressed(String mediaName, int progress) { }
+        public void onDownloadProgressed(String mediaName, int progress) {
+        }
 
         @Override
-        public void onDownloadComplete(String mediaName) { }
+        public void onDownloadComplete(String mediaName) {
+        }
 
         @Override
         public void onWifiScanListChanged(ArrayList<BaseStation> baseStations) {
-            /*ArrayList<BaseStation> foundBaseSations = new ArrayList<>();
 
-            // find base stations in database.
-            for (BaseStation bs : baseStations) {
-                Cursor c = db.sqlSelect(
-                        DbTables.RadioMap.TABLE_NAME,
-                        null,
-                        DbTables.RadioMap.COL_SSID + " = ?",
-                        new String[] { bs.getSsid() },
-                        null, null, null
-                );
-                foundBaseSations.addAll(getCursorData(c));
-            }
-
-            // laterate Position.
-            try {
-                LatLng calcPosition = Lateration.calculatePosition(foundBaseSations);
-                Log.d("drone",
-                        "\nwifi found: " + baseStations.size()
-                                + "\nwifi in db found: " + foundBaseSations.size()
-                                + "\ncalculated Position: " + calcPosition.toString());
-            } catch (Exception e) {
-                Log.e(TAG, e.getMessage());
-                Log.d("drone",
-                        "\nwifi found: " + baseStations.size()
-                                + "\nwifi in db found: " + foundBaseSations.size());
-            }*/
         }
 
-        /**
-         * Function to get data from database cursor.
-         * @param cursor from Database.
-         * @return List with all BaseStations from Database.
-         */
-        public ArrayList<BaseStation> getCursorData(Cursor cursor) {
-            ArrayList<BaseStation> ret = new ArrayList<>();
+        @Override
+        public void onPositionChanged(double latitude, double longitude, double altitude) {
 
-            if (cursor != null) {
-                if (cursor.moveToFirst()) {
-                    do {
-                        try {
-                            BaseStation bs = new BaseStation();
-                            bs.setSsid(cursor.getString(cursor.getColumnIndex(DbTables.RadioMap.COL_SSID)));
-                            bs.setLatLng(new LatLng(
-                                    cursor.getDouble(cursor.getColumnIndex(DbTables.RadioMap.COL_LAT)),
-                                    cursor.getDouble(cursor.getColumnIndex(DbTables.RadioMap.COL_LNG))
-                            ));
-                            ret.add(bs);
-                        } catch (Exception e) {
-                            Log.e(TAG, e.getMessage());
-                        }
-                    } while (cursor.moveToFirst());
-                }
-            }
-            return ret;
         }
+
     };
-
-    private float radToDeg(float value) {
-        return (float) (value * (180 / Math.PI));
-    }
 }

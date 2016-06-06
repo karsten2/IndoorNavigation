@@ -117,6 +117,8 @@ public class BebopDrone {
         void onWifiScanListChanged(ArrayList<BaseStation> baseStations);
 
         void onAttitudeChanged(float roll, float pitch, float yaw);
+
+        void onPositionChanged(double latitude, double longitude, double altitude);
     }
 
     private final List<Listener> mListeners;
@@ -503,6 +505,13 @@ public class BebopDrone {
         }
     }
 
+    private void notifyLocationChanged(double latitude, double longitude, double altitude) {
+        List<Listener> listenersCpy = new ArrayList<>(mListeners);
+        for (Listener listener : listenersCpy) {
+            listener.onPositionChanged(latitude, longitude, altitude);
+        }
+    }
+
 
     //endregion notify listener block
 
@@ -622,6 +631,20 @@ public class BebopDrone {
                         @Override
                         public void run() {
                             notifyAttitudeChanged(roll, pitch, yaw);
+                        }
+                    });
+                }
+            } else if ((commandKey == ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_POSITIONCHANGED) && (elementDictionary != null)){
+                ARControllerArgumentDictionary<Object> args = elementDictionary.get(ARControllerDictionary.ARCONTROLLER_DICTIONARY_SINGLE_KEY);
+                if (args != null) {
+                    final double latitude = (double)args.get(ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_POSITIONCHANGED_LATITUDE);
+                    final double longitude = (double)args.get(ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_POSITIONCHANGED_LONGITUDE);
+                    final double altitude = (double)args.get(ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_POSITIONCHANGED_ALTITUDE);
+
+                    mHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            notifyLocationChanged(latitude, longitude, altitude);
                         }
                     });
                 }
