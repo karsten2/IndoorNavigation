@@ -6,4 +6,5 @@
     <color name="colorPrimary">#212121</color>
     <color name="colorPrimaryDark">#000000</color>
     <color name="colorAccent">#448AFF</color>
+    <color name="colorEmergency">#FF5722</color>
 </resources>

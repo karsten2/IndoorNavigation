@@ -36,7 +36,7 @@
         android:src="@drawable/ic_action_add"
         app:layout_anchorGravity="bottom|right|end"
         android:layout_alignParentBottom="true"
-        android:layout_alignParentRight="true" />
+        android:layout_alignParentEnd="true" />
 
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/fabStart"
@@ -47,7 +47,19 @@
         android:src="@drawable/ic_play_dark"
         app:layout_anchorGravity="bottom|right|end"
         android:layout_alignParentBottom="true"
-        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
+        android:visibility="invisible"/>
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/fabEmergency"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:clickable="true"
+        android:src="@drawable/ic_file_download"
+        app:layout_anchorGravity="bottom|right|end"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
         android:visibility="invisible"/>
 
 </RelativeLayout>

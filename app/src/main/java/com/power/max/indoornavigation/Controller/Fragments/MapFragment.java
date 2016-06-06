@@ -25,6 +25,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -44,6 +45,7 @@ import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.power.max.indoornavigation.Adapter.WifiAdapter;
+import com.power.max.indoornavigation.Controller.DroneController;
 import com.power.max.indoornavigation.Database.DbTables;
 import com.power.max.indoornavigation.Database.SQLiteDBHelper;
 import com.power.max.indoornavigation.Helper.Utils;
@@ -79,6 +81,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     private SQLiteDBHelper dbHelper;
 
+    private DroneController droneController;
+
     private OnFragmentInteractionListener mListener;
 
     public MapFragment() {
@@ -101,6 +105,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
+        droneController = new DroneController(getContext());
+
         View view = inflater.inflate(R.layout.fragment_map, container, false);
 
         iconStart = BitmapDescriptorFactory.fromResource(R.drawable.ic_action_location_lgreen);
@@ -114,17 +120,41 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             }
         });
 
+        final FloatingActionButton fabEmergency = (FloatingActionButton) view.findViewById(R.id.fabEmergency);
+        if (fabEmergency != null) {
+            fabEmergency.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    droneController.EmergencyLand();
+                    fabEmergency.setVisibility(View.INVISIBLE);
+                    fabStart.setVisibility(View.VISIBLE);
+                }
+            });
+        }
+
         fabStart = (FloatingActionButton) view.findViewById(R.id.fabStart);
-        fabStart.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startAutonomousFlight();
-            }
-        });
+        if (fabStart != null) {
+            fabStart.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    //droneController.startAutonomousFlight(route);
+                    fabStart.setVisibility(View.INVISIBLE);
+
+                    if (fabEmergency != null) {
+                        fabEmergency.setVisibility(View.VISIBLE);
+                        droneController.startAutonomousFlight(new ArrayList<Marker>());
+                    }
+                }
+            });
+        }
+
 
         SupportMapFragment mapFragment = (SupportMapFragment)
                 getChildFragmentManager().findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
+        if (mapFragment != null) {
+            mapFragment.getMapAsync(this);
+        }
+
 
         return view;
     }

@@ -14,7 +14,6 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 
-import com.google.android.gms.maps.model.LatLng;
 import com.parrot.arsdk.ARSDK;
 import com.parrot.arsdk.arcommands.ARCOMMANDS_ARDRONE3_MEDIARECORDEVENT_PICTUREEVENTCHANGED_ERROR_ENUM;
 import com.parrot.arsdk.arcommands.ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_ENUM;
@@ -22,12 +21,10 @@ import com.parrot.arsdk.arcontroller.ARCONTROLLER_DEVICE_STATE_ENUM;
 import com.parrot.arsdk.arcontroller.ARControllerCodec;
 import com.parrot.arsdk.arcontroller.ARFrame;
 import com.parrot.arsdk.ardiscovery.ARDiscoveryDeviceService;
-import com.power.max.indoornavigation.Database.DbTables;
 import com.power.max.indoornavigation.Database.SQLiteDBHelper;
 import com.power.max.indoornavigation.Drone.BebopDrone;
 import com.power.max.indoornavigation.Drone.BebopDrone.Listener;
 import com.power.max.indoornavigation.Drone.DroneDiscoverer;
-import com.power.max.indoornavigation.Math.Lateration;
 import com.power.max.indoornavigation.Model.BaseStation;
 import com.power.max.indoornavigation.R;
 
