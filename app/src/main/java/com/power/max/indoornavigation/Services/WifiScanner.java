@@ -60,7 +60,7 @@ public class WifiScanner extends Service {
     public void onCreate() {
         super.onCreate();
 
-        wifi = (WifiManager) this.getSystemService(this.WIFI_SERVICE);
+        wifi = (WifiManager) this.getSystemService(WIFI_SERVICE);
 
         if (!wifi.isWifiEnabled()) {
             wifi.setWifiEnabled(true);

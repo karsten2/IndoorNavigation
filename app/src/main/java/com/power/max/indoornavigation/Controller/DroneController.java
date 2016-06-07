@@ -8,7 +8,7 @@ import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.maps.android.SphericalUtil;
 import com.parrot.arsdk.ARSDK;
 import com.parrot.arsdk.arcommands.ARCOMMANDS_ARDRONE3_MEDIARECORDEVENT_PICTUREEVENTCHANGED_ERROR_ENUM;
 import com.parrot.arsdk.arcommands.ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_ENUM;
@@ -42,6 +42,10 @@ public class DroneController {
     private LatLng currentPositionGPS;
     private LatLng currentPosition;
     private float currentAttitudeYaw;
+
+    private boolean autonomousFlight = false;
+    private ArrayList<Marker> route = new ArrayList<>();
+    private ArrayList<Marker> routeDone = new ArrayList<>();
 
     // Load native libraries, mandatory!
     static {
@@ -121,43 +125,36 @@ public class DroneController {
         @Override
         public void onPilotingStateChanged(
                 ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_ENUM state) {
-
+            switch (state) {
+                case ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_HOVERING:
+                    Log.d(TAG, "PilotingStateChanged to hovering.");
+                    moveDrone();
+                    break;
+            }
         }
 
         @Override
         public void onPictureTaken(
-                ARCOMMANDS_ARDRONE3_MEDIARECORDEVENT_PICTUREEVENTCHANGED_ERROR_ENUM error) {
-
-        }
+                ARCOMMANDS_ARDRONE3_MEDIARECORDEVENT_PICTUREEVENTCHANGED_ERROR_ENUM error) { }
 
         @Override
-        public void configureDecoder(ARControllerCodec codec) {
-
-        }
+        public void configureDecoder(ARControllerCodec codec) { }
 
         @Override
-        public void onFrameReceived(ARFrame frame) {
-
-        }
+        public void onFrameReceived(ARFrame frame) { }
 
         @Override
-        public void onMatchingMediasFound(int nbMedias) {
-
-        }
+        public void onMatchingMediasFound(int nbMedias) { }
 
         @Override
-        public void onDownloadProgressed(String mediaName, int progress) {
-
-        }
+        public void onDownloadProgressed(String mediaName, int progress) { }
 
         @Override
-        public void onDownloadComplete(String mediaName) {
-
-        }
+        public void onDownloadComplete(String mediaName) { }
 
         @Override
         public void onWifiScanListChanged(ArrayList<BaseStation> baseStations) {
-            //getPositionFromWifi(baseStations);
+            getPositionFromWifi(baseStations);
             //Log.d(TAG, String.valueOf(baseStations.size()));
         }
 
@@ -180,31 +177,69 @@ public class DroneController {
 
     /**
      * Function to move the connected drone.
-     * @param pitch Forward/ backward angle of the drone. Value in percentage from -100 to 100.
-     * @param flag 1 if the pitch and roll values should be used, 0 otherwise.
+     * pitch Forward/ backward angle of the drone. Value in percentage from -100 to 100.
+     * flag 1 if the pitch and roll values should be used, 0 otherwise.
+     *
+     * The drone is moved forward, until the coordinates of the drone matches the destination.
+     *
+     * @param destination the drone should fly.
      */
-    private void droneMove(byte pitch, byte flag) {
+    private void droneMove(LatLng destination) {
         if (mBebopDrone != null) {
-            mBebopDrone.setPitch(pitch);
-            mBebopDrone.setFlag(flag);
+            mBebopDrone.setPitch((byte) 20);
+            mBebopDrone.setFlag((byte) 1);
+            double tolerance = 1;
+
+            do {} while (SphericalUtil.computeDistanceBetween(currentPosition, destination) > tolerance);
+
+            mBebopDrone.setPitch((byte) 0);
+            mBebopDrone.setFlag((byte) 0);
         }
     }
 
     /**
-     * Function to turn the drown around the y-Axis for a specific angle.
-     * Positive values = right, negative values = left.
-     * -
-     * yaw value in percentage -100 to 100.
-     * @param angle the angle you want to turn the drone.
-     *              positive = right turn, negative = left turn.
+     * Function to turn the drone around the z-Axis for a specific angle.
+     *
+     * lat/lng: (0.0,1.0) atan2:     90.0
+     * lat/lng: (1.0,0.0) atan2:     0.0
+     * lat/lng: (-1.0,0.0)atan2:    -180.0
+     * lat/lng: (0.0,-1.0)atan2:    -90.0
+     *
+     *               90
+     *               |
+     *               |
+     *  +-180 _______|_______ 0
+     *               |
+     *               |
+     *               |
+     *              -90
+     *
+     * Use modulo to get the correct degrees.
+     *      degrees = degrees % 360.
+     *          0 to 180    will return the same numbers you put in.
+     *          -180 to -1  return values between 180 to 359 degrees.
+     *
+     * The function will find out the shortest way to turn the drone (left or right) to reach
+     * the wanted bearing.
+     *
+     * @param bearing The destination angle you want to turn the drone.
+     *                Value between 180 <= x <= -180.
      */
-    private void droneYaw(double angle) {
+    private void droneYawTo(double bearing) {
         if (mBebopDrone != null && droneIsFlying()) {
             double startAngle = this.currentAttitudeYaw;
             double tolerance = 5.0;
+            double result = (bearing % 360) - (startAngle % 360);
+
+            Log.d(TAG, "droneYawTo: startAngle: " + startAngle + " destBearing: " + bearing
+                    + "result = " + result);
 
             // start turning.
-            mBebopDrone.setYaw((byte) 25);
+            mBebopDrone.setYaw((byte) (20 * (result < 0 ? -1 : 1)));
+
+            // wait until the correct bearing is reached.
+            do {} while (this.currentAttitudeYaw >= bearing - tolerance
+                    && this.currentAttitudeYaw <= bearing + tolerance);
 
             // end turning.
             mBebopDrone.setYaw((byte) 0);
@@ -308,68 +343,50 @@ public class DroneController {
     }
 
     /**
-     * Function to get the angle between two given points.
-     *      Usage:  Drone calculates own Position and knows the next point to fly to.
-     *              The drone also knows the direction of north, east, etc. By calculating the angle
-     *              between the two points, the drone can be adjusted, to point to the next
-     *              destination, and than just have to be moved forward.
-     * http://www.igismap.com/formula-to-find-bearing-or-heading-angle-between-two-points-latitude-longitude/
-     * @param p1 Position of the drone.
-     * @param p2 Next target.
-     * @return Angle between p1 and p2.
-     */
-    private double pointsToAngle(LatLng p1, LatLng p2) {
-        double deltaLng = p2.longitude - p1.longitude;
-        double x = Math.cos(p1.latitude) * Math.sin(deltaLng);
-        double y = Math.cos(p2.latitude) * Math.sin(p1.latitude) - Math.sin(p2.latitude) * Math.cos(p1.latitude) * Math.cos(deltaLng);
-
-        return Math.atan2(x, y);
-    }
-
-    /**
      * Function to start an autonomous flight with the drone.
      * @param route the drone has to fly.
      */
     public void startAutonomousFlight(ArrayList<Marker> route) {
         ArrayList<LatLng> test = new ArrayList<>();
-        /*test.add(new LatLng(54.338524, 13.074356));
-        test.add(new LatLng(54.338538, 13.074436));*/
 
-        test.add(new LatLng(0, 0));
-        test.add(new LatLng(0, 1));
-        test.add(new LatLng(0, 0));
-        test.add(new LatLng(1, 0));
-        test.add(new LatLng(0, 0));
-        test.add(new LatLng(0, -1));
-        test.add(new LatLng(0, 0));
-        test.add(new LatLng(-1, 0));
         test.add(new LatLng(54.33848680468227, 13.074342012405396));
         test.add(new LatLng(54.33850244183943, 13.07449221611023));
 
+        this.route = route;
+
         if (mBebopDrone != null /*&& route != null && route.size() > 1*/) {
-            switch (mBebopDrone.getFlyingState()) {
-                case ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_HOVERING:
-                case ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_FLYING:
-                    break;
-                case ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_LANDED:
-                    // start drone.
-                    //droneTakeOff();
+            if (!droneIsFlying()) {
+                //droneTakeOff();
+            }
 
-                    for (int i = 0; i < test.size(); i ++) {
-                        Log.d("atan", "punkte: " + test.get(i) + "; "
-                                + test.get(i + 1) + "atan2: "
-                                + pointsToAngle(test.get(i), test.get(i + 1)));
-                        i ++;
-                    }
-                    Log.d("atan", "current bearing: " + this.currentAttitudeYaw);
+            autonomousFlight = true;
+        }
+    }
 
+    private void moveDrone() {
+        if (autonomousFlight) {
+            if (route.size() == 0) {
+                autonomousFlight = false;
+                Log.d(TAG, "moveDrone(): no more points left on route. Landing drone...");
+                this.droneLand();
+            } else {
+                // get first marker
+                Marker marker = route.get(0);
+                Log.d(TAG, "moveDrone(): current Destination: " + marker.getPosition().toString());
 
-                    /*double turnAngle = pointsToAngle(test.get(0), test.get(1));
-                    turnAngle = radToDeg((float) turnAngle);
-                    Log.d(TAG, " TURN ANGLE #############: " + turnAngle);*/
-                    break;
+                // turn drone by getting the bearing of the current position and the marker position.
+                droneYawTo(SphericalUtil.computeHeading(currentPosition, marker.getPosition()));
+
+                // move drone to marker
+                droneMove(marker.getPosition());
+
+                // move marker from route to routeDone
+                route.remove(marker);
+                routeDone.add(marker);
+
             }
         }
+        // SphericalUtil.computeHeading
     }
 
     private boolean droneIsFlying() {

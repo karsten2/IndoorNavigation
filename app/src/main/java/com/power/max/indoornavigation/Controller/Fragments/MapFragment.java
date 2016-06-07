@@ -44,6 +44,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.maps.android.SphericalUtil;
 import com.power.max.indoornavigation.Adapter.WifiAdapter;
 import com.power.max.indoornavigation.Controller.DroneController;
 import com.power.max.indoornavigation.Database.DbTables;
@@ -113,12 +114,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         iconRoute = BitmapDescriptorFactory.fromResource(R.drawable.ic_action_location_2_black);
 
         fab = (FloatingActionButton) view.findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dialog();
-            }
-        });
+        if (fab != null) {
+            fab.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    dialog();
+                }
+            });
+        }
 
         final FloatingActionButton fabEmergency = (FloatingActionButton) view.findViewById(R.id.fabEmergency);
         if (fabEmergency != null) {
@@ -633,10 +636,5 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private void setActionBarText(String text) {
         if (((AppCompatActivity) getActivity()).getSupportActionBar() != null)
             ((AppCompatActivity) getActivity()).getSupportActionBar().setTitle(text);
-    }
-
-    private void startAutonomousFlight() {
-        // TODO Pass route and drone object
-
     }
 }
