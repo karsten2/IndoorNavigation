@@ -47,9 +47,47 @@ public class DroneController {
     private ArrayList<Marker> route = new ArrayList<>();
     private ArrayList<Marker> routeDone = new ArrayList<>();
 
+    private List<Listener> mListener;
+
     // Load native libraries, mandatory!
     static {
         ARSDK.loadSDKLibs();
+    }
+
+    /**
+     * Listener that fires, if the drone reached a checkpoint.
+     */
+    public interface Listener {
+        void checkPointReachedListener(Marker marker);
+
+        void videoReceivedListener(ARControllerCodec codec);
+    }
+
+    public void setListener(Listener listener) {
+        if (mListener == null)
+            mListener = new ArrayList<>();
+
+        mListener.add(listener);
+    }
+
+    /**
+     * Event that fires when a marker is added to array routeDone.
+     * @param marker the last added Marker in array routeDone.
+     */
+    private void notifyCheckPointReached(Marker marker) {
+        for (Listener listener : mListener) {
+            listener.checkPointReachedListener(marker);
+        }
+    }
+
+    /**
+     * Event that fires when the drone sends a video.
+     * @param codec that contains the video from the drone.
+     */
+    private void notifyVideoReceived(ARControllerCodec codec) {
+        for (Listener listener : mListener) {
+            listener.videoReceivedListener(codec);
+        }
     }
 
     public DroneController(Context context) {
@@ -106,20 +144,22 @@ public class DroneController {
                 case 50:
                     Toast.makeText(context,
                             "Battery has " + batteryPercentage + "% left.",
-                            Toast.LENGTH_SHORT).show();
+                            Toast.LENGTH_LONG).show();
                     break;
                 case 25:
                 case 15:
                     Toast.makeText(context,
                             "Battery low! " + batteryPercentage + "% left",
-                            Toast.LENGTH_SHORT).show();
+                            Toast.LENGTH_LONG).show();
                     break;
                 case 5:
                     Toast.makeText(context,
                             "Battery low, landing now...",
                             Toast.LENGTH_LONG).show();
                     droneLand();
+                    Log.d(TAG, "battery on " + batteryPercentage + "%. Drone landing...");
             }
+            Log.d("Battery", " on " + batteryPercentage + " %");
         }
 
         @Override
@@ -138,7 +178,9 @@ public class DroneController {
                 ARCOMMANDS_ARDRONE3_MEDIARECORDEVENT_PICTUREEVENTCHANGED_ERROR_ENUM error) { }
 
         @Override
-        public void configureDecoder(ARControllerCodec codec) { }
+        public void configureDecoder(ARControllerCodec codec) {
+            notifyVideoReceived(codec);
+        }
 
         @Override
         public void onFrameReceived(ARFrame frame) { }
@@ -154,20 +196,20 @@ public class DroneController {
 
         @Override
         public void onWifiScanListChanged(ArrayList<BaseStation> baseStations) {
-            getPositionFromWifi(baseStations);
+            getPositionFromWifi(new ArrayList<BaseStation>(baseStations));
             //Log.d(TAG, String.valueOf(baseStations.size()));
         }
 
         @Override
         public void onAttitudeChanged(float roll, float pitch, float yaw) {
             currentAttitudeYaw = radToDeg(yaw);
-            Log.d(TAG, String.valueOf(currentAttitudeYaw));
+            //Log.d(TAG, String.valueOf(currentAttitudeYaw));
         }
 
         @Override
         public void onPositionChanged(double latitude, double longitude, double altitude) {
             currentPositionGPS = new LatLng(latitude, longitude);
-            Log.d(TAG, currentPositionGPS.toString());
+            //Log.d(TAG, currentPositionGPS.toString());
         }
     };
 
@@ -190,7 +232,8 @@ public class DroneController {
             mBebopDrone.setFlag((byte) 1);
             double tolerance = 1;
 
-            do {} while (SphericalUtil.computeDistanceBetween(currentPosition, destination) > tolerance);
+            do {} while (SphericalUtil.computeDistanceBetween(
+                    currentPosition, destination) > tolerance);
 
             mBebopDrone.setPitch((byte) 0);
             mBebopDrone.setFlag((byte) 0);
@@ -235,11 +278,15 @@ public class DroneController {
                     + "result = " + result);
 
             // start turning.
-            mBebopDrone.setYaw((byte) (20 * (result < 0 ? -1 : 1)));
+            mBebopDrone.setYaw((byte) (30 * (result < 0 ? -1 : 1)));
 
-            // wait until the correct bearing is reached.
-            do {} while (this.currentAttitudeYaw >= bearing - tolerance
-                    && this.currentAttitudeYaw <= bearing + tolerance);
+            // yaw until the correct bearing is reached.
+            while (!(this.currentAttitudeYaw >= bearing - tolerance
+                    && this.currentAttitudeYaw <= bearing + tolerance)) {
+
+            }
+
+            Log.d(TAG, "currentYaw: " + currentAttitudeYaw);
 
             // end turning.
             mBebopDrone.setYaw((byte) 0);
@@ -282,7 +329,7 @@ public class DroneController {
     public ArrayList<BaseStation> getCursorData(Cursor cursor) {
         ArrayList<BaseStation> ret = new ArrayList<>();
 
-        if (cursor != null) {
+        if (cursor != null && cursor.isClosed()) {
             if (cursor.moveToFirst()) {
                 do {
                     try {
@@ -297,6 +344,8 @@ public class DroneController {
                         Log.e(TAG, e.getMessage());
                     }
                 } while (cursor.moveToFirst());
+
+                cursor.close();
             }
         }
         return ret;
@@ -354,18 +403,17 @@ public class DroneController {
 
         this.route = route;
 
-        if (mBebopDrone != null /*&& route != null && route.size() > 1*/) {
+        if (mBebopDrone != null && route.size() > 0) {
             if (!droneIsFlying()) {
-                //droneTakeOff();
+                droneTakeOff();
             }
-
             autonomousFlight = true;
         }
     }
 
     private void moveDrone() {
         if (autonomousFlight) {
-            if (route.size() == 0) {
+            /*if (route.size() == 0) {
                 autonomousFlight = false;
                 Log.d(TAG, "moveDrone(): no more points left on route. Landing drone...");
                 this.droneLand();
@@ -383,8 +431,12 @@ public class DroneController {
                 // move marker from route to routeDone
                 route.remove(marker);
                 routeDone.add(marker);
+                notifyCheckPointReached(marker);
+            }*/
 
-            }
+            Log.d(TAG, "start yaw");
+            droneYawTo(90);
+
         }
         // SphericalUtil.computeHeading
     }
@@ -410,5 +462,17 @@ public class DroneController {
         droneDiscoverer.removeListener(mDiscovererListener);
 
         db.close();
+    }
+
+    public void destroy() {
+        try {
+            droneDiscoverer.stopDiscovering();
+            droneDiscoverer.cleanup();
+            droneDiscoverer.removeListener(mDiscovererListener);
+
+            db.close();
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+        }
     }
 }

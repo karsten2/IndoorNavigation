@@ -25,10 +25,10 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.VideoView;
 
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -44,7 +44,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
-import com.google.maps.android.SphericalUtil;
+import com.parrot.arsdk.arcontroller.ARControllerCodec;
 import com.power.max.indoornavigation.Adapter.WifiAdapter;
 import com.power.max.indoornavigation.Controller.DroneController;
 import com.power.max.indoornavigation.Database.DbTables;
@@ -62,6 +62,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     private FloatingActionButton fab;
     private FloatingActionButton fabStart;
+    private BebopVideoView bebopVideoView;
 
     private MenuItem menuCancel;
     private MenuItem menuAccept;
@@ -78,13 +79,29 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private ArrayList<Polyline> polylines = new ArrayList<>();
     private boolean addRoute = false;
 
-    private BitmapDescriptor iconStart, iconRoute;
+    private BitmapDescriptor iconStart, iconRoute, iconDone;
 
     private SQLiteDBHelper dbHelper;
 
     private DroneController droneController;
 
     private OnFragmentInteractionListener mListener;
+
+    private final DroneController.Listener mDroneControllerListener = new DroneController.Listener() {
+        @Override
+        public void checkPointReachedListener(Marker marker) {
+            route.get(route.indexOf(marker)).setIcon(iconDone);
+            Log.d("Listener", "marker added" + marker.getId());
+        }
+
+        @Override
+        public void videoReceivedListener(ARControllerCodec codec) {
+            Log.d("Listener", "video received");
+            if (bebopVideoView != null) {
+                bebopVideoView.configureDecoder(codec);
+            }
+        }
+    };
 
     public MapFragment() {
         // Required empty public constructor
@@ -107,11 +124,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                              Bundle savedInstanceState) {
 
         droneController = new DroneController(getContext());
+        droneController.setListener(mDroneControllerListener);
 
         View view = inflater.inflate(R.layout.fragment_map, container, false);
 
         iconStart = BitmapDescriptorFactory.fromResource(R.drawable.ic_action_location_lgreen);
         iconRoute = BitmapDescriptorFactory.fromResource(R.drawable.ic_action_location_2_black);
+        iconDone = BitmapDescriptorFactory.fromResource(R.drawable.ic_action_location_2_green);
+
+        bebopVideoView = (BebopVideoView) view.findViewById(R.id.videoView);
 
         fab = (FloatingActionButton) view.findViewById(R.id.fab);
         if (fab != null) {
@@ -145,19 +166,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
                     if (fabEmergency != null) {
                         fabEmergency.setVisibility(View.VISIBLE);
-                        droneController.startAutonomousFlight(new ArrayList<Marker>());
+                        droneController.startAutonomousFlight(new ArrayList<Marker>(route));
                     }
                 }
             });
         }
-
 
         SupportMapFragment mapFragment = (SupportMapFragment)
                 getChildFragmentManager().findFragmentById(R.id.map);
         if (mapFragment != null) {
             mapFragment.getMapAsync(this);
         }
-
 
         return view;
     }
@@ -227,7 +246,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         mMap.setMyLocationEnabled(true);
     }
-
 
     GoogleMap.OnMarkerClickListener onMarkerClickListener = new GoogleMap.OnMarkerClickListener() {
         @Override
@@ -575,6 +593,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public void onDestroy() {
         super.onDestroy();
 
+        droneController.destroy();
         Utils.stopService(WifiScanner.class, getActivity());
     }
 
