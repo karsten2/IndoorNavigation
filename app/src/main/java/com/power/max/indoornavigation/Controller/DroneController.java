@@ -2,6 +2,7 @@ package com.power.max.indoornavigation.Controller;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.os.AsyncTask;
 import android.os.Handler;
 import android.util.Log;
 import android.widget.Toast;
@@ -239,17 +240,25 @@ public class DroneController {
      *
      * @param destination the drone should fly.
      */
-    private void droneMove(LatLng destination) {
+    private void droneMove(final LatLng destination) {
         if (mBebopDrone != null) {
-            mBebopDrone.setPitch((byte) 20);
+            mBebopDrone.setPitch((byte) 30);
             mBebopDrone.setFlag((byte) 1);
-            double tolerance = 1;
+            final double toleranceDistance = 1;
 
-            do {} while (SphericalUtil.computeDistanceBetween(
-                    currentPosition, destination) > tolerance);
+            AsyncTask asyncTask = new AsyncTask() {
+                @Override
+                protected Object doInBackground(Object[] params) {
+                    while (SphericalUtil.computeDistanceBetween(
+                            currentPosition, destination) > toleranceDistance);
 
-            mBebopDrone.setPitch((byte) 0);
-            mBebopDrone.setFlag((byte) 0);
+                    mBebopDrone.setPitch((byte) 0);
+                    mBebopDrone.setFlag((byte) 0);
+
+                    return null;
+                }
+            };
+            asyncTask.execute();
         }
     }
 
@@ -281,10 +290,10 @@ public class DroneController {
      * @param bearing The destination angle you want to turn the drone.
      *                Value between 180 <= x <= -180.
      */
-    private void droneYawTo(double bearing) {
+    private void droneYawTo(final double bearing) {
         if (mBebopDrone != null && droneIsFlying()) {
             double startAngle = this.currentAttitudeYaw;
-            double tolerance = 5.0;
+            final double tolerance = 5.0;
             double result = (bearing % 360) - (startAngle % 360);
 
             Log.d(TAG, "droneYawTo: startAngle: " + startAngle + " destBearing: " + bearing
@@ -293,16 +302,23 @@ public class DroneController {
             // start turning.
             mBebopDrone.setYaw((byte) (30 * (result < 0 ? -1 : 1)));
 
-            // yaw until the correct bearing is reached.
-            while (!(this.currentAttitudeYaw >= bearing - tolerance
-                    && this.currentAttitudeYaw <= bearing + tolerance)) {
+            AsyncTask asyncTask = new AsyncTask() {
+                @Override
+                protected Object doInBackground(Object[] params) {
+                    while(!(currentAttitudeYaw >= bearing - tolerance
+                            && currentAttitudeYaw <= bearing + tolerance)) {
+                        //Log.d(TAG, String.valueOf(currentAttitudeYaw));
+                    }
 
-            }
+                    Log.d(TAG, "currentYaw: " + currentAttitudeYaw);
 
-            Log.d(TAG, "currentYaw: " + currentAttitudeYaw);
+                    // end turning.
+                    mBebopDrone.setYaw((byte) 0);
+                    return null;
+                }
+            };
 
-            // end turning.
-            mBebopDrone.setYaw((byte) 0);
+            asyncTask.execute();
         }
     }
 
@@ -328,10 +344,11 @@ public class DroneController {
         }
     }
 
+    /**
+     * Landing the drone from outside the class.
+     */
     public void EmergencyLand() {
-        if (mBebopDrone != null) {
-            mBebopDrone.land();
-        }
+        this.droneLand();
     }
 
     /**
@@ -448,7 +465,8 @@ public class DroneController {
             }*/
 
             Log.d(TAG, "start yaw");
-            droneYawTo(90);
+            droneYawTo(0);
+            mBebopDrone.calibrateMagnetometer((byte) 1);
 
         }
         // SphericalUtil.computeHeading
