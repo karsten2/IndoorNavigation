@@ -16,6 +16,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -100,6 +101,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             if (bebopVideoView != null) {
                 bebopVideoView.configureDecoder(codec);
             }
+        }
+
+        @Override
+        public void droneConnectedListener(String name) {
+            setActionBarText(name);
         }
     };
 
@@ -316,6 +322,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             if (route.indexOf(marker) == 0 && polylines.size() > 0) {
                 polylines.get(0).remove();
                 polylines.remove(polylines.get(0));
+                if (route.size() > 1) route.get(1).setIcon(iconStart);
             } else if (route.indexOf(marker) == route.size() - 1  && polylines.size() > 0) {
                 polylines.get(polylines.size() - 1).remove();
                 polylines.remove(polylines.size() - 1);
@@ -653,7 +660,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     }
 
     private void setActionBarText(String text) {
-        if (((AppCompatActivity) getActivity()).getSupportActionBar() != null)
-            ((AppCompatActivity) getActivity()).getSupportActionBar().setTitle(text);
+        ActionBar actionBar = ((AppCompatActivity) getActivity()).getSupportActionBar();
+        if (actionBar != null)
+            actionBar.setTitle(text);
     }
 }

@@ -61,6 +61,8 @@ public class DroneController {
         void checkPointReachedListener(Marker marker);
 
         void videoReceivedListener(ARControllerCodec codec);
+
+        void droneConnectedListener(String name);
     }
 
     public void setListener(Listener listener) {
@@ -87,6 +89,16 @@ public class DroneController {
     private void notifyVideoReceived(ARControllerCodec codec) {
         for (Listener listener : mListener) {
             listener.videoReceivedListener(codec);
+        }
+    }
+
+    /**
+     * Event fires when the dronecontroller connects to a drone.
+     * @param name of the connected Drone.
+     */
+    private void notifyDroneConnected(String name) {
+        for (Listener listener : mListener) {
+            listener.droneConnectedListener(name);
         }
     }
 
@@ -124,6 +136,7 @@ public class DroneController {
                 mBebopDrone.addListener(mBebopListener);
                 if (mBebopDrone.connect()) {
                     runnable.run();
+                    notifyDroneConnected(mBebopDrone.toString());
                 }
 
                 Log.d(TAG, "drone found" + dronesList.get(0).getName());
