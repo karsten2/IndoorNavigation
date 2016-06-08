@@ -46,8 +46,8 @@ public final class DbTables {
                         RadioMap._ID + " INTEGER PRIMARY KEY," +
                         RadioMap.COLUMN_NAME_ENTRY_ID + TEXT_TYPE + COMMA_SEP +
                         RadioMap.COLUMN_NAME_TITLE + TEXT_TYPE + COMMA_SEP +
-                        RadioMap.COL_SSID + TEXT_TYPE + COMMA_SEP +
-                        RadioMap.COL_BSSID + TEXT_TYPE + " UNIQUE" + COMMA_SEP +
+                        RadioMap.COL_SSID + TEXT_TYPE + " UNIQUE" + COMMA_SEP +
+                        RadioMap.COL_BSSID + TEXT_TYPE + COMMA_SEP +
                         RadioMap.COL_LAT + REAL_TYPE + COMMA_SEP +
                         RadioMap.COL_LNG + REAL_TYPE + ")";
 

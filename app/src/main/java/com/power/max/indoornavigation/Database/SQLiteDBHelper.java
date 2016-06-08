@@ -30,7 +30,7 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL(DbTables.RadioMap.SQL_DROP_TABLE);
+        //db.execSQL(DbTables.RadioMap.SQL_DROP_TABLE);
 
         Log.d("sql", DbTables.RadioMap.SQL_CREATE_ENTRIES);
         db.execSQL(DbTables.RadioMap.SQL_CREATE_ENTRIES);

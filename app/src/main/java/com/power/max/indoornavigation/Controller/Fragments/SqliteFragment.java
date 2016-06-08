@@ -22,6 +22,7 @@ import android.widget.Button;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import com.google.android.gms.maps.model.LatLng;
 import com.power.max.indoornavigation.Adapter.ApCursorAdapter;
 import com.power.max.indoornavigation.Adapter.WifiAdapter;
 import com.power.max.indoornavigation.Database.DbTables;
@@ -33,6 +34,7 @@ import com.power.max.indoornavigation.R;
 import com.power.max.indoornavigation.Services.WifiScanner;
 
 import java.util.ArrayList;
+import java.util.Random;
 
 public class SqliteFragment extends Fragment {
 
@@ -111,8 +113,11 @@ public class SqliteFragment extends Fragment {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //dialog();
-                Lateration.calculatePosition(new ArrayList<BaseStation>());
+                long result = dbHelper.sqlInsert(
+                        DbTables.RadioMap.TABLE_NAME,
+                        null,
+                        getDummy().toDbValues());
+                Toast.makeText(getContext(), result + "rows inserted", Toast.LENGTH_SHORT);
             }
         });
 
@@ -217,6 +222,20 @@ public class SqliteFragment extends Fragment {
         }
     };
 
+    private BaseStation getDummy() {
+        return new BaseStation(
+                "Router_" + getRandom(),
+                "00:00:00:00:00:00",
+                "1.2.3.4.5",
+                "00:00:00:00:00:00",
+                1,
+                new LatLng(0, 0));
+    }
+
+    private int getRandom() {
+        return new Random().nextInt();
+    }
+
     @Override
     public void onPause() {
         super.onPause();
@@ -248,7 +267,6 @@ public class SqliteFragment extends Fragment {
 
         dbHelper.close();
     }
-
 
     @Override
     public void onResume() {

@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.database.DataSetObserver;
 import android.graphics.Color;
 import android.net.Uri;
 import android.net.wifi.ScanResult;
@@ -56,6 +57,8 @@ import com.power.max.indoornavigation.R;
 import com.power.max.indoornavigation.Services.WifiScanner;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MapFragment extends Fragment implements OnMapReadyCallback {
 
@@ -68,6 +71,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private MenuItem menuCancel;
     private MenuItem menuAccept;
     private MenuItem menuDelete;
+    private MenuItem menuDroneConnectionState;
 
     private WifiAdapter wifiAdapter;
     private ArrayList<ScanResult> scanResults = new ArrayList<>();
@@ -75,6 +79,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private PolygonOptions indoorMock = new PolygonOptions();
     private GoogleMap mMap;
     private LatLng currentPosition;
+
+    private Marker mMarkerDronePosition;
 
     private ArrayList<Marker> route = new ArrayList<>();
     private ArrayList<Polyline> polylines = new ArrayList<>();
@@ -104,8 +110,23 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
 
         @Override
-        public void droneConnectedListener(String name) {
-            setActionBarText(name);
+        public void onDroneConnectionChangedListener(boolean connected) {
+            if (menuDroneConnectionState != null) {
+                if (connected) {
+                    menuDroneConnectionState.setIcon(R.drawable.ic_drone_connected);
+                } else {
+                    menuDroneConnectionState.setIcon(R.drawable.ic_drone_disconnected);
+                }
+            }
+        }
+
+        @Override
+        public void positionChangedListener(LatLng latLng, float bearing) {
+            if (mMarkerDronePosition != null) {
+                mMarkerDronePosition.setVisible(true);
+                mMarkerDronePosition.setPosition(latLng);
+                mMarkerDronePosition.setRotation(bearing);
+            }
         }
     };
 
@@ -145,6 +166,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             fab.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+                    getBaseStations();
                     dialog();
                 }
             });
@@ -172,7 +194,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
                     if (fabEmergency != null) {
                         fabEmergency.setVisibility(View.VISIBLE);
-                        droneController.startAutonomousFlight(new ArrayList<Marker>(route));
+                        droneController.startAutopilot(new ArrayList<Marker>(route));
                     }
                 }
             });
@@ -193,6 +215,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         menuAccept = menu.findItem(R.id.action_accept);
         menuCancel = menu.findItem(R.id.action_cancel);
         menuDelete = menu.findItem(R.id.action_delete);
+        menuDroneConnectionState = menu.findItem(R.id.action_connectionState);
     }
 
     @Override
@@ -221,6 +244,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             progressBar.setVisibility(View.INVISIBLE);
         }
 
+        // Set GoogleMap listener.
         mMap = googleMap;
         mMap.setOnCameraChangeListener(new GoogleMap.OnCameraChangeListener() {
             @Override
@@ -234,12 +258,18 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         mMap.setOnMapClickListener(onMapClickListener);
         mMap.setOnMarkerDragListener(onMarkerDragListener);
 
+        // Prepare marker for drone position.
+        BitmapDescriptor iconDrone = BitmapDescriptorFactory.fromResource(R.drawable.ic_navigation);
+        mMarkerDronePosition = mMap.addMarker(new MarkerOptions().icon(iconDrone)
+                .visible(false).position(new LatLng(0, 0)));
+
+        // drawing the access points stored in the database.
         drawAccessPoints();
 
-        double START_LAT = 54.33901533;
-        double START_LNG = 13.07454586;
-        LatLng latLng = new LatLng(START_LAT, START_LNG);
-        CameraPosition cameraPosition = new CameraPosition.Builder().target(latLng).zoom(18.5f).build();
+        // setting camera position and and zoom level.
+        LatLng latLng = new LatLng(54.33901533, 13.07454586);
+        CameraPosition cameraPosition = new CameraPosition.Builder()
+                .target(latLng).zoom(mMap.getMaxZoomLevel()).build();
         CameraUpdate cameraUpdate = CameraUpdateFactory.newCameraPosition(cameraPosition);
         mMap.moveCamera(cameraUpdate);
 
@@ -305,12 +335,36 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         public void onMarkerDragStart(Marker marker) { }
 
         @Override
-        public void onMarkerDrag(Marker marker) { updateRoute(marker); }
+        public void onMarkerDrag(Marker marker) {
+            if (route.contains(marker)) {
+                updateRoute(marker);
+            } else {
+                // update base station in database.
+                // create hashmap with columns and new values to update.
+                Map<String, String> update = new HashMap<>();
+                update.put(DbTables.RadioMap.COL_LAT, String.valueOf(marker.getPosition().latitude));
+                update.put(DbTables.RadioMap.COL_LNG, String.valueOf(marker.getPosition().longitude));
+
+                dbHelper.sqlUpdate(
+                        DbTables.RadioMap.TABLE_NAME,
+                        update,
+                        DbTables.RadioMap.COL_SSID + " = ?",
+                        new String[] {marker.getTitle()}
+                );
+            }
+        }
 
         @Override
         public void onMarkerDragEnd(Marker marker) { }
     };
 
+    /**
+     * Function to delete a marker.
+     * Redrawing Polylines.
+     * Deleting marker from database, if exists.
+     * Removing Marker from map.
+     * @param marker to delete.
+     */
     private void deleteMarker(Marker marker) {
         marker.remove();
         dbHelper.sqlDelete(DbTables.RadioMap.TABLE_NAME,
@@ -381,6 +435,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
+    /**
+     * Function to redraw the polylines of a route when a route marker is dragged.
+     * @param marker that is dragged.
+     */
     private void updateRoute(Marker marker) {
         int markerPosition = route.indexOf(marker);
 
@@ -528,10 +586,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private ArrayList<BaseStation> getData(Cursor cursor) {
 
         ArrayList<BaseStation> ret = new ArrayList<>();
-        cursor.moveToFirst();
 
-        if (cursor.getCount() > 0) {
-
+        if (cursor.moveToFirst()) {
             do {
                 BaseStation baseStation = new BaseStation();
                 baseStation.setSsid(cursor.getString(cursor.getColumnIndexOrThrow("SSID")));
@@ -566,13 +622,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         @Override
         public void onReceive(Context context, Intent intent) {
             try {
-                //scanResults = (ArrayList<ScanResult>) intent.getExtras().get("scanResults");
                 wifiAdapter.clear();
                 wifiAdapter.addAll((ArrayList<ScanResult>) intent.getExtras().get("scanResults"));
                 wifiAdapter.notifyDataSetChanged();
-                Log.d("Map", "received data: " + scanResults.size());
+                Log.d(TAG, "received data: " + scanResults.size());
             } catch (ClassCastException e) {
-                Log.e("Map", e.getMessage());
+                Log.e(TAG, "wifi receiver onReceive" + e.getMessage());
             }
         }
     };
@@ -583,7 +638,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         try {
             getActivity().unregisterReceiver(broadcastReceiver);
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "Try to unregister reciever" + e.getMessage());
         }
 
         Utils.stopService(WifiScanner.class, getActivity());
