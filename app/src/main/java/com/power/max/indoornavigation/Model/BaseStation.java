@@ -5,6 +5,7 @@ import android.database.Cursor;
 import android.net.wifi.ScanResult;
 import android.util.Log;
 
+import com.google.android.gms.drive.internal.StringListResponse;
 import com.google.android.gms.maps.model.LatLng;
 import com.power.max.indoornavigation.Database.DbTables;
 
@@ -22,6 +23,7 @@ public class BaseStation implements Serializable {
     private int channel;
     private LatLng latLng;
     private double distance;
+    private String timeStamp;
 
     private static final String TAG = "BaseStation";
 
@@ -34,9 +36,10 @@ public class BaseStation implements Serializable {
         this.latLng = latLng;
     }
 
-    public BaseStation(LatLng latLng, double distance) {
+    public BaseStation(LatLng latLng, double distance, String timeStamp) {
         this.latLng = latLng;
         this.distance = distance;
+        this.timeStamp = timeStamp;
     }
 
     public BaseStation(String ssid,
@@ -110,6 +113,14 @@ public class BaseStation implements Serializable {
         this.channel = channel;
     }
 
+    public String getTimeStamp() {
+        return timeStamp;
+    }
+
+    public void setTimeStamp(String timeStamp) {
+        this.timeStamp = timeStamp;
+    }
+
     /**
      * Function to convert the class' values into a key->value set.
      * Required for Sqlite Database insert.
@@ -124,5 +135,10 @@ public class BaseStation implements Serializable {
         ret.put(DbTables.RadioMap.COL_LNG, this.latLng.longitude);
 
         return ret;
+    }
+
+    @Override
+    public String toString() {
+        return timeStamp + ";" + ssid + ";" + distance;
     }
 }

@@ -43,8 +43,6 @@ import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.maps.model.PolygonOptions;
-import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.parrot.arsdk.arcontroller.ARControllerCodec;
 import com.power.max.indoornavigation.Adapter.WifiAdapter;
@@ -129,6 +127,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 mMarkerDronePosition.setPosition(latLng);
                 mMarkerDronePosition.setRotation(bearing);
             }
+        }
+
+        @Override
+        public void onWifiScanlistChanged(ArrayList<BaseStation> baseStations) {
+
         }
     };
 

@@ -4,6 +4,7 @@ import android.content.Context;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.util.Log;
+import android.util.TimeUtils;
 
 import com.parrot.arsdk.arcommands.ARCOMMANDS_ARDRONE3_MEDIARECORDEVENT_PICTUREEVENTCHANGED_ERROR_ENUM;
 import com.parrot.arsdk.arcommands.ARCOMMANDS_ARDRONE3_NETWORKSTATE_WIFISCANLISTCHANGED_BAND_ENUM;
@@ -33,11 +34,14 @@ import com.parrot.arsdk.ardiscovery.ARDiscoveryService;
 import com.parrot.arsdk.arutils.ARUtilsException;
 import com.parrot.arsdk.arutils.ARUtilsFtpConnection;
 import com.parrot.arsdk.arutils.ARUtilsManager;
+import com.power.max.indoornavigation.Helper.Utils;
 import com.power.max.indoornavigation.Model.BaseStation;
 
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class BebopDrone {
     private static final String TAG = "BebopDrone";
@@ -608,6 +612,7 @@ public class BebopDrone {
                                 mBaseStation.setSsid(ssid);
                                 mBaseStation.setDistance(rssi);
                                 mBaseStation.setChannel(channel);
+                                mBaseStation.setTimeStamp(Utils.getDate(System.currentTimeMillis(), "dd.MM.yyyy hh:mm:ss.SSS"));
                                 mBaseStations.add(mBaseStation);
                             }
                         });
