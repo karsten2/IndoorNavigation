@@ -53,6 +53,7 @@ import com.power.max.indoornavigation.Database.DbTables;
 import com.power.max.indoornavigation.Database.SQLiteDBHelper;
 import com.power.max.indoornavigation.Helper.Utils;
 import com.power.max.indoornavigation.Model.BaseStation;
+import com.power.max.indoornavigation.Model.CustomPolyLine;
 import com.power.max.indoornavigation.R;
 import com.power.max.indoornavigation.Services.WifiScanner;
 
@@ -76,14 +77,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private WifiAdapter wifiAdapter;
     private ArrayList<ScanResult> scanResults = new ArrayList<>();
 
-    private PolygonOptions indoorMock = new PolygonOptions();
     private GoogleMap mMap;
     private LatLng currentPosition;
 
     private Marker mMarkerDronePosition;
 
-    private ArrayList<Marker> route = new ArrayList<>();
-    private ArrayList<Polyline> polylines = new ArrayList<>();
+    private CustomPolyLine route;
+    //private ArrayList<Marker> route = new ArrayList<>();
+    //private ArrayList<Polyline> polylines = new ArrayList<>();
     private boolean addRoute = false;
 
     private BitmapDescriptor iconStart, iconRoute, iconDone;
@@ -97,7 +98,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private final DroneController.Listener mDroneControllerListener = new DroneController.Listener() {
         @Override
         public void checkPointReachedListener(Marker marker) {
-            route.get(route.indexOf(marker)).setIcon(iconDone);
+            //route.get(route.indexOf(marker)).setIcon(iconDone);
+            route.setMarkerIcon(marker, iconDone);
             Log.d("Listener", "marker added" + marker.getId());
         }
 
@@ -194,7 +196,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
                     if (fabEmergency != null) {
                         fabEmergency.setVisibility(View.VISIBLE);
-                        droneController.startAutopilot(new ArrayList<Marker>(route));
+                        droneController.startAutopilot(route.getMarkers());
                     }
                 }
             });
@@ -244,8 +246,19 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             progressBar.setVisibility(View.INVISIBLE);
         }
 
-        // Set GoogleMap listener.
         mMap = googleMap;
+
+        // create object to mock the room
+
+        // create object to be the route
+        // create marker options
+        // create polyline options
+        MarkerOptions routeMarkerOptions = new MarkerOptions().draggable(true);
+        PolylineOptions routePLineOptions = new PolylineOptions().width(4);
+        route = new CustomPolyLine(mMap, iconRoute, iconStart,
+                routeMarkerOptions, routePLineOptions);
+
+        // Set GoogleMap listener.
         mMap.setOnCameraChangeListener(new GoogleMap.OnCameraChangeListener() {
             @Override
             public void onCameraChange(CameraPosition cameraPosition) {
@@ -292,7 +305,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
-                    deleteMarker(marker);
+                    route.removeLineMarker(marker);
                 }
             });
             builder.setNegativeButton("Cancel", null);
@@ -301,11 +314,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     };
 
+    /**
+     * Event for adding a route when clicking on the map.
+     */
     GoogleMap.OnMapClickListener onMapClickListener = new GoogleMap.OnMapClickListener() {
         @Override
         public void onMapClick(LatLng latLng) {
             if (addRoute) {
-                // add marker to array and draw marker on map.
+                // add route marker to array and draw marker on map.
                 if (route.size() == 0) {
                     route.add(mMap.addMarker(new MarkerOptions()
                             .position(latLng)
@@ -321,15 +337,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                             .draggable(true);
 
                     route.add(mMap.addMarker(markerOptions));
-                    polylines.add(mMap.addPolyline(new PolylineOptions()
-                            .add(old, latLng)
-                            .color(Color.BLACK)
-                            .width(4.0f)));
                 }
             }
         }
     };
 
+    /**
+     * Event for dragging a marker on the map, when the marker is long clicked.
+     */
     GoogleMap.OnMarkerDragListener onMarkerDragListener = new GoogleMap.OnMarkerDragListener() {
         @Override
         public void onMarkerDragStart(Marker marker) { }
@@ -337,7 +352,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         @Override
         public void onMarkerDrag(Marker marker) {
             if (route.contains(marker)) {
-                updateRoute(marker);
+                route.updateLineMarker(marker);
             } else {
                 // update base station in database.
                 // create hashmap with columns and new values to update.
@@ -359,123 +374,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     };
 
     /**
-     * Function to delete a marker.
-     * Redrawing Polylines.
-     * Deleting marker from database, if exists.
-     * Removing Marker from map.
-     * @param marker to delete.
+     * Function to get all Access points from the database and draw them on the map.
      */
-    private void deleteMarker(Marker marker) {
-        marker.remove();
-        dbHelper.sqlDelete(DbTables.RadioMap.TABLE_NAME,
-                DbTables.RadioMap.COL_SSID + " = ?", new String[] {marker.getTitle()});
-
-        // replace two polylines with one new.
-        if (route.contains(marker)) {
-
-            if (route.indexOf(marker) == 0 && polylines.size() > 0) {
-                polylines.get(0).remove();
-                polylines.remove(polylines.get(0));
-                if (route.size() > 1) route.get(1).setIcon(iconStart);
-            } else if (route.indexOf(marker) == route.size() - 1  && polylines.size() > 0) {
-                polylines.get(polylines.size() - 1).remove();
-                polylines.remove(polylines.size() - 1);
-            } else if (polylines.size() > 0) {
-                int firstLineIndex = route.indexOf(marker) - 1;
-                int secondLineIndex = firstLineIndex + 1;
-
-                if (firstLineIndex >= 0 && secondLineIndex >= 0
-                        && firstLineIndex < polylines.size() && secondLineIndex < polylines.size()) {
-
-                    Polyline firstLine = polylines.get(firstLineIndex);
-                    Polyline secondLine = polylines.get(secondLineIndex);
-
-                    // remove from map.
-                    firstLine.remove();
-                    secondLine.remove();
-
-                    // replace first line with new line.
-                    polylines.set(firstLineIndex, mMap.addPolyline(new PolylineOptions()
-                            .add(firstLine.getPoints().get(0), secondLine.getPoints().get(1))
-                            .width(4.0f)));
-
-                    // remove seconde line from array.
-                    polylines.remove(secondLine);
-                }
-            }
-
-            // remove marker from route.
-            route.remove(marker);
-        }
-    }
-
-    /**
-     * Draws all items in array route onto the map.
-     * The markers in the array have to be replaced by the new ones, since google map does only
-     * accept MarkerOptions to add.
-     */
-    private void drawRoute() {
-        for (Marker marker : route) {
-            marker.remove();
-            route.set(route.indexOf(marker),
-                    mMap.addMarker(new MarkerOptions()
-                            .position(marker.getPosition())
-                            .icon(route.indexOf(marker) == 0 ? iconStart : iconRoute)
-                            .anchor(0.5f, 0.5f)
-                            .draggable(true)));
-        }
-    }
-
     private void drawAccessPoints() {
         for (BaseStation baseStation : getBaseStations()) {
             mMap.addMarker(new MarkerOptions()
                     .position(baseStation.getLatLng())
                     .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_router))
-                    .title(baseStation.getSsid()));
-        }
-    }
-
-    /**
-     * Function to redraw the polylines of a route when a route marker is dragged.
-     * @param marker that is dragged.
-     */
-    private void updateRoute(Marker marker) {
-        int markerPosition = route.indexOf(marker);
-
-        if (markerPosition == 0) {
-            Polyline polyline = polylines.get(0);
-            if (polyline != null) {
-                polyline.remove();
-                polylines.set(0, mMap.addPolyline(new PolylineOptions()
-                    .add(marker.getPosition(), polyline.getPoints().get(1))
-                    .width(4.0f)));
-            }
-        } else if (markerPosition == route.size() - 1) {
-            Polyline polyline = polylines.get(polylines.size() - 1);
-            if (polyline != null) {
-                polyline.remove();
-                polylines.set(polylines.size() - 1, mMap.addPolyline(new PolylineOptions()
-                        .add(polyline.getPoints().get(0), marker.getPosition())
-                        .width(4.0f)));
-            }
-        } else {
-            int firstLineIndex = route.indexOf(marker) - 1;
-            int secondLineIndex = firstLineIndex + 1;
-
-            if (firstLineIndex >= 0 && secondLineIndex >= 0
-                    && firstLineIndex < polylines.size() && secondLineIndex < polylines.size()) {
-                Polyline firstLine = polylines.get(firstLineIndex);
-                firstLine.remove();
-                polylines.set(firstLineIndex, mMap.addPolyline(new PolylineOptions()
-                        .add(firstLine.getPoints().get(0), marker.getPosition())
-                        .width(4.0f)));
-
-                Polyline secondLine = polylines.get(secondLineIndex);
-                secondLine.remove();
-                polylines.set(secondLineIndex, mMap.addPolyline(new PolylineOptions()
-                        .add(marker.getPosition(), secondLine.getPoints().get(1))
-                        .width(4.0f)));
-            }
+                    .title(baseStation.getSsid())
+                    .draggable(true));
         }
     }
 
@@ -710,8 +617,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     private void clearMap() {
         route.clear();
-        polylines.clear();
-        mMap.clear();
+        drawAccessPoints();
     }
 
     private void setActionBarText(String text) {

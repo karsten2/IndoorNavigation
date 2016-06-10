@@ -117,7 +117,7 @@ public class SqliteFragment extends Fragment {
                         DbTables.RadioMap.TABLE_NAME,
                         null,
                         getDummy().toDbValues());
-                Toast.makeText(getContext(), result + "rows inserted", Toast.LENGTH_SHORT);
+                Toast.makeText(getContext(), result + "rows inserted", Toast.LENGTH_SHORT).show();
             }
         });
 

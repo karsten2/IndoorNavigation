@@ -22,7 +22,6 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
     public SQLiteDBHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
         SQLiteDatabase db = this.getWritableDatabase();
-        db.execSQL(DbTables.RadioMap.SQL_DROP_TABLE);
 
         Log.d("sql", DbTables.RadioMap.SQL_CREATE_ENTRIES);
         db.execSQL(DbTables.RadioMap.SQL_CREATE_ENTRIES);
