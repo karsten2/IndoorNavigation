@@ -57,10 +57,9 @@
         android:layout_margin="16dp"
         android:clickable="true"
         android:src="@drawable/ic_file_download"
-        app:layout_anchorGravity="bottom|right|end"
+        app:layout_anchorGravity="bottom|left|start"
         android:layout_alignParentBottom="true"
-        android:layout_alignParentEnd="true"
-        android:visibility="invisible"/>
+        android:layout_alignParentStart="true"/>
 
     <com.power.max.indoornavigation.Controller.Fragments.BebopVideoView
         android:id="@+id/videoView"

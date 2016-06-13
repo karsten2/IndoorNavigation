@@ -255,11 +255,7 @@ public class DroneController {
         public void onAttitudeChanged(float roll, float pitch, float yaw) {
             currentAttitudeYaw = radToDeg(yaw);
 
-            double a = (currentAttitudeYaw % 360);
-            double b = 90 % 360;
-            double c = b - (a < 0 ? a += 360 : a);
-
-            Log.d(TAG, String.valueOf(currentAttitudeYaw) + " : " + b + " : " + c);
+            //Log.d(TAG, String.valueOf(currentAttitudeYaw) );
         }
 
         @Override
