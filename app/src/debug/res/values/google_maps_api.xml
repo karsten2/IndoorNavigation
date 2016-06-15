@@ -7,7 +7,7 @@
     https://console.developers.google.com/flows/enableapi?apiid=maps_android_backend&keyType=CLIENT_SIDE_ANDROID&r=EC:1D:93:A0:9E:6B:8B:4E:9A:FA:8C:6D:28:D8:93:F9:4D:5B:B7:B6%3Bcom.power.max.indoornavigation
 
     You can also add your credentials to an existing key, using this line:
-    EC:1D:93:A0:9E:6B:8B:4E:9A:FA:8C:6D:28:D8:93:F9:4D:5B:B7:B6;com.power.max.indoornavigation
+    EC:1D:93:A0:9E:6B:8B:4E:9A:FA:8C:6D:28:D8:93:F9:4D:5B:B7:B6;com.indoor.navigation.indoornavigation
 
     Alternatively, follow the directions here:
     https://developers.google.com/maps/documentation/android/start#get-key

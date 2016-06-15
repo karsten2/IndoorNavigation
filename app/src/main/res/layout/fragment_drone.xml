@@ -2,9 +2,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.power.max.indoornavigation.Controller.Fragments.DroneFragment">
+    tools:context="com.indoornavigation.Controller.Fragments.DroneFragment">
 
-    <com.power.max.indoornavigation.Controller.Fragments.BebopVideoView
+    <com.indoornavigation.Controller.Fragments.BebopVideoView
         android:id="@+id/videoView"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />

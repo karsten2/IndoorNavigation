@@ -17,5 +17,9 @@
             android:id="@+id/nav_drone"
             android:icon="@drawable/ic_airplanemode_active_black_24dp"
             android:title="@string/title_activity_drone"/>
+
+        <item
+            android:id="@+id/nav_python"
+            android:title="@string/title_activity_python"/>
     </group>
 </menu>

@@ -4,6 +4,7 @@
     <string name="title_activity_map">Karte</string>
     <string name="title_activity_wifi">Wifi-Scanner</string>
     <string name="title_activity_drone">Drohnensteuerung</string>
+    <string name="title_activity_python">Python activity</string>
     <string name="title_fragment_sqlite">Radiomap</string>
     <string name="edit_route">Edit route</string>
 
