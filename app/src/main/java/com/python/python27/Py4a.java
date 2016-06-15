@@ -25,6 +25,7 @@ public class Py4a {
     }
 
     public void launchScript(Object... params) {
+
         if (isInstallNeeded()) {
             new InstallAsyncTask().execute();
         } else {
@@ -43,7 +44,7 @@ public class Py4a {
         if (!testedFile.exists()) {
             return true;
         }
-        return false;
+        return true;
     }
 
     public class InstallAsyncTask extends AsyncTask<Void, Integer, Boolean> {
@@ -69,8 +70,10 @@ public class Py4a {
     private void runScriptService() {
         if (GlobalConstants.IS_FOREGROUND_SERVICE) {
             context.startService(new Intent(context, ScriptService.class));
+            services.add(ScriptService.class);
         } else {
-            context.startService(new Intent(context, BackgroundScriptService.class));
+            context.startService(new Intent(context, BackgroundScriptService.class).putExtra("extras", "crazy parameters"));
+            services.add(BackgroundScriptService.class);
         }
     }
 

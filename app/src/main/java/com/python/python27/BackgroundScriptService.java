@@ -125,7 +125,7 @@ public class BackgroundScriptService extends Service {
         File script = new File(scriptName);
 
         // arguments
-        ArrayList<String> args = new ArrayList<String>();
+        ArrayList<String> args = new ArrayList<>();
         args.add(scriptName);
         args.add("--foreground");
 
@@ -153,10 +153,6 @@ public class BackgroundScriptService extends Service {
                 new Runnable() {
             @Override
             public void run() {
-                mProxy.shutdown();
-                stopSelf(startId);
-                killProcess();
-                android.os.Process.killProcess(android.os.Process.myPid());
 
             }
         }, script.getParent(), Environment.getExternalStorageDirectory().getAbsolutePath()

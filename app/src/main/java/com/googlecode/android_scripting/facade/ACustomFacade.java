@@ -1,8 +1,7 @@
-package com.python.android_scripting.facade;
+package com.googlecode.android_scripting.facade;
 
 import android.util.Log;
 
-import com.googlecode.android_scripting.facade.FacadeManager;
 import com.googlecode.android_scripting.jsonrpc.RpcReceiver;
 import com.googlecode.android_scripting.rpc.Rpc;
 import com.googlecode.android_scripting.rpc.RpcMinSdk;
@@ -29,10 +28,16 @@ public class ACustomFacade extends RpcReceiver {
     //
     // import android
     // droid = android.Android()
-    // droid.aHelloFonction("hello rpc")
+    // droid.aHelloFunction("hello rpc")
     @Rpc(description = "Print hello in logcat")
-    public void aHelloFonction(@RpcParameter(name = "message") String message) throws InterruptedException {
+    public void aHelloFunction(@RpcParameter(name = "message") String message) throws InterruptedException {
         mOnInitLock.await();
         Log.i(GlobalConstants.LOG_TAG, "ACustomFacade received: " + message);
+    }
+
+    @Rpc(description = "sends string",
+            returns = "a message")
+    public String getCustomMessage() {
+        return "custom facade message";
     }
 }

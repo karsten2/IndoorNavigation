@@ -14,35 +14,12 @@
  * the License.
  */
 
-package com.python.android_scripting.facade;
+package com.googlecode.android_scripting.facade;
+
+import android.os.Build;
 
 import com.google.common.collect.Maps;
-import com.googlecode.android_scripting.Log;
-import com.googlecode.android_scripting.facade.ActivityResultFacade;
-import com.googlecode.android_scripting.facade.AndroidFacade;
-import com.googlecode.android_scripting.facade.ApplicationManagerFacade;
-import com.googlecode.android_scripting.facade.BatteryManagerFacade;
-import com.googlecode.android_scripting.facade.BluetoothFacade;
-import com.googlecode.android_scripting.facade.CameraFacade;
-import com.googlecode.android_scripting.facade.CommonIntentsFacade;
-import com.googlecode.android_scripting.facade.ContactsFacade;
-import com.googlecode.android_scripting.facade.EventFacade;
-import com.googlecode.android_scripting.facade.EyesFreeFacade;
-import com.googlecode.android_scripting.facade.LocationFacade;
-import com.googlecode.android_scripting.facade.MediaPlayerFacade;
-import com.googlecode.android_scripting.facade.MediaRecorderFacade;
-import com.googlecode.android_scripting.facade.PhoneFacade;
-import com.googlecode.android_scripting.facade.PreferencesFacade;
-import com.googlecode.android_scripting.facade.SensorManagerFacade;
-import com.googlecode.android_scripting.facade.SettingsFacade;
-import com.googlecode.android_scripting.facade.SignalStrengthFacade;
-import com.googlecode.android_scripting.facade.SmsFacade;
-import com.googlecode.android_scripting.facade.SpeechRecognitionFacade;
-import com.googlecode.android_scripting.facade.TextToSpeechFacade;
-import com.googlecode.android_scripting.facade.ToneGeneratorFacade;
-import com.googlecode.android_scripting.facade.WakeLockFacade;
-import com.googlecode.android_scripting.facade.WebCamFacade;
-import com.googlecode.android_scripting.facade.WifiFacade;
+
 import com.googlecode.android_scripting.facade.ui.UiFacade;
 import com.googlecode.android_scripting.jsonrpc.RpcReceiver;
 import com.googlecode.android_scripting.rpc.MethodDescriptor;
@@ -76,18 +53,9 @@ public class FacadeConfiguration {
     private static int sSdkLevel;
 
     static {
+        sSdkLevel = Build.VERSION.SDK_INT;
 
-        if (android.os.Build.VERSION.SDK == null) {
-            sSdkLevel = 3;
-        } else {
-            try {
-                sSdkLevel = Integer.parseInt(android.os.Build.VERSION.SDK);
-            } catch (NumberFormatException e) {
-                Log.e(e);
-            }
-        }
-
-        sFacadeClassList = new HashSet<Class<? extends RpcReceiver>>();
+        sFacadeClassList = new HashSet<>();
         sFacadeClassList.add(AndroidFacade.class);
         sFacadeClassList.add(ApplicationManagerFacade.class);
         sFacadeClassList.add(CameraFacade.class);
@@ -109,10 +77,11 @@ public class FacadeConfiguration {
         sFacadeClassList.add(ActivityResultFacade.class);
         sFacadeClassList.add(MediaPlayerFacade.class);
         sFacadeClassList.add(PreferencesFacade.class);
+        sFacadeClassList.add(ACustomFacade.class);
 
         if (sSdkLevel >= 4) {
             sFacadeClassList.add(TextToSpeechFacade.class);
-            sFacadeClassList.add(ACustomFacade.class);
+
         } else {
             sFacadeClassList.add(EyesFreeFacade.class);
         }
@@ -148,7 +117,7 @@ public class FacadeConfiguration {
      * Returns a list of {@link MethodDescriptor} objects for all facades.
      */
     public static List<MethodDescriptor> collectMethodDescriptors() {
-        return new ArrayList<MethodDescriptor>(sRpcs.values());
+        return new ArrayList<>(sRpcs.values());
     }
 
     /**

@@ -1,6 +1,4 @@
-package com.python.android_scripting.interpreter;
-
-import com.googlecode.android_scripting.interpreter.Interpreter;
+package com.googlecode.android_scripting.interpreter;
 
 import java.util.ArrayList;
 import java.util.List;

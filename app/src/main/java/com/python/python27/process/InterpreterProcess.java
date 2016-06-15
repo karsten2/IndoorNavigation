@@ -28,7 +28,7 @@ import com.googlecode.android_scripting.AndroidProxy;
 import com.googlecode.android_scripting.interpreter.Interpreter;
 import com.googlecode.android_scripting.interpreter.InterpreterConstants;
 import com.googlecode.android_scripting.jsonrpc.RpcReceiverManagerFactory;
-import com.python.android_scripting.interpreter.MyInterpreter;
+import com.googlecode.android_scripting.interpreter.MyInterpreter;
 import com.python.python27.ScriptApplication;
 
 import java.io.File;

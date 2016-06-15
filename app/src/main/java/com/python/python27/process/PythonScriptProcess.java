@@ -24,7 +24,7 @@ package com.python.python27.process;
 
 import com.googlecode.android_scripting.AndroidProxy;
 import com.googlecode.android_scripting.interpreter.InterpreterConfiguration;
-import com.python.android_scripting.interpreter.MyInterpreter;
+import com.googlecode.android_scripting.interpreter.MyInterpreter;
 
 
 import java.io.File;

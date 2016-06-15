@@ -29,57 +29,26 @@ import com.googlecode.android_scripting.interpreter.InterpreterConfiguration.Con
 
 public class ScriptApplication extends BaseApplication implements ConfigurationObserver {
 
-//  private volatile boolean receivedConfigUpdate = false;
-//  private final CountDownLatch mLatch = new CountDownLatch(1);
+    private static Context context = null;
+    private static String thePackageName = null;
+    private static String theFilesDir = null;
 
-  private static Context context = null;
-  private static String thePackageName = null;
-  private static String theFilesDir = null;
+    public static String getThePackageName() {
+        return thePackageName;
+    }
 
-  // ------------------------------------------------------------------------------------------------------
+    @Override
+    public void onCreate() {
+        super.onCreate();
 
-  public static Context getAppContext() {
-      return ScriptApplication.context;
-  }
+        // dirty way to access some needed info in GlobalConstants
+        ScriptApplication.context = getApplicationContext();
+        ScriptApplication.theFilesDir = this.getFilesDir().getAbsolutePath();
+        ScriptApplication.thePackageName = this.getPackageName();
+    }
 
-  public static String getThePackageName() {
-	  return thePackageName;
-  }
-	
-  public static String getTheFilesDir() {
-	  return theFilesDir;
-  }
+    @Override
+    public void onConfigurationChanged() {
 
-  // ------------------------------------------------------------------------------------------------------
-
-  @Override
-  public void onCreate() {
-      super.onCreate();
-//    mConfiguration = new InterpreterConfiguration(this);
-//    mConfiguration.registerObserver(this);
-//    mConfiguration.startDiscovering(InterpreterConstants.MIME + Utils.getFileExtension("foo.py"));
-		
-	  // dirty way to access some needed info in GlobalConstants
-	  ScriptApplication.context = getApplicationContext();
-	  ScriptApplication.theFilesDir = this.getFilesDir().getAbsolutePath();
-	  ScriptApplication.thePackageName = this.getPackageName();
-  } 
-
-@Override
-  public void onConfigurationChanged() {
-//	receivedConfigUpdate = true;
-//	mLatch.countDown();
-  }
-
-//  public boolean readyToStart() {
-//
-//    try {
-//      mLatch.await();
-//    } catch (InterruptedException e) {
-//      e.printStackTrace();
-//    }
-//
-//    return receivedConfigUpdate;
-//  }
-
+    }
 }

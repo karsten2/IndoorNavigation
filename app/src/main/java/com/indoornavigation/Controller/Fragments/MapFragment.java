@@ -91,6 +91,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     private OnFragmentInteractionListener mListener;
 
+    private Py4a py4a;
+
     private final DroneController.Listener mDroneControllerListener = new DroneController.Listener() {
         @Override
         public void checkPointReachedListener(Marker marker) {
@@ -182,7 +184,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 public void onClick(View v) {
                     droneController.EmergencyLand();
                     fabStart.setVisibility(View.VISIBLE);
-                    Py4a py4a = new Py4a(getContext());
+                    py4a = new Py4a(getContext());
                     py4a.launchScript();
                 }
             });
@@ -562,6 +564,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             Log.e(TAG, "Try to unregister reciever" + e.getMessage());
         }
 
+        if (py4a != null) py4a.destroy();
+
         Utils.stopService(WifiScanner.class, getActivity());
     }
 
@@ -574,6 +578,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         } catch (Exception e) {
             Log.e(TAG, "Try to unregister reciever" + e.getMessage());
         }
+
+        if (py4a != null) py4a.destroy();
 
         droneController.destroy();
         Utils.stopService(WifiScanner.class, getActivity());

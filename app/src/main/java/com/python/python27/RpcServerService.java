@@ -1,6 +1,5 @@
 package com.python.python27;
 
-import android.annotation.TargetApi;
 import android.app.Service;
 import android.content.Intent;
 import android.os.AsyncTask;
@@ -33,11 +32,8 @@ public class RpcServerService extends Service {
         super.onCreate();
     }
 
-    @TargetApi(11)
     @Override
-    public void onStart(Intent intent, int startId) {
-        super.onStart(intent, startId);
-
+    public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent.getAction().equals("com.android.python27.LAUNCH_RPC_SERVER")) {
             LaunchServerAsyncTask ll = new LaunchServerAsyncTask(intent);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2) {
@@ -46,6 +42,8 @@ public class RpcServerService extends Service {
                 ll.execute();
             }
         }
+
+        return super.onStartCommand(intent, flags, startId);
     }
 
     private boolean tryPort(AndroidProxy androidProxy, boolean usePublicIp, int usePort) {
@@ -65,24 +63,11 @@ public class RpcServerService extends Service {
         }
 
         @Override
-        protected void onPreExecute() {
-        }
-
-        @Override
         protected Boolean doInBackground(String... params) {
             launchServer(this.i, false);
 
             return true;
         }
-
-        @Override
-        protected void onProgressUpdate(Integer... values) {
-        }
-
-        @Override
-        protected void onPostExecute(Boolean installStatus) {
-        }
-
     }
 
     private AndroidProxy launchServer(Intent intent, boolean requiresHandshake) {
