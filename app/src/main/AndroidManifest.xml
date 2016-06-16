@@ -29,7 +29,7 @@
             android:value="AIzaSyDWRDrsT_ZOwhqs1pqNzHEKGQnsmDowN-4" />
 
         <activity
-            android:name="com.indoornavigation.Controller.Activities.MainActivity"
+            android:name="com.indoornavigation.Controller.MainActivity"
             android:label="@string/app_name"
             android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>

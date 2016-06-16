@@ -20,13 +20,14 @@ public class Py4a {
     private Context context;
     private Intent intentScriptService;
     private Intent intentBackgroundScriptService;
+    private BackgroundScriptService backgroundScriptService = new BackgroundScriptService();
     private static final String TAG = "Py4a";
 
     public Py4a(Context context) {
         this.context = context;
 
         intentScriptService = new Intent(context, ScriptService.class);
-        intentBackgroundScriptService = new Intent(context, BackgroundScriptService.class);
+        intentBackgroundScriptService = new Intent(context, backgroundScriptService.getClass());
     }
 
     public void launchScript(Object... params) {
@@ -124,7 +125,7 @@ public class Py4a {
                 }
 
             } catch (Exception e) {
-                Log.e(GlobalConstants.LOG_TAG, "Failed to copyResourcesToLocal", e);
+                //Log.e(GlobalConstants.LOG_TAG, "Failed to copyResourcesToLocal", e);
                 succeed = false;
             }
         }
@@ -154,7 +155,7 @@ public class Py4a {
                     succeed &= Utils.unzip(content, context.getFilesDir().getAbsolutePath() + "/", true, true);
                 }
             } catch (Exception e) {
-                Log.e(GlobalConstants.LOG_TAG, "Failed to update resources", e);
+                //Log.e(GlobalConstants.LOG_TAG, "Failed to update resources", e);
                 succeed = false;
             }
         }

@@ -171,7 +171,7 @@ public class BackgroundScriptService extends Service {
                 + "/" + this.getPackageName(), args, environmentVariables, pythonBinary);
     }
 
-    RpcReceiverManager getRpcReceiverManager() throws InterruptedException {
+    public RpcReceiverManager getRpcReceiverManager() throws InterruptedException {
         mLatch.await();
 
         if (mFacadeManager == null) { // Facade manage may not be available on startup.
