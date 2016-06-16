@@ -29,6 +29,7 @@ import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.Environment;
 import android.os.IBinder;
+import android.util.Log;
 
 import com.googlecode.android_scripting.AndroidProxy;
 import com.googlecode.android_scripting.jsonrpc.RpcReceiverManager;
@@ -56,6 +57,8 @@ public class BackgroundScriptService extends Service {
 
     private static Context context = null;
 
+    private startMyAsyncTask mStartMyAsyncTask;
+
     static {
         instance = null;
     }
@@ -69,6 +72,14 @@ public class BackgroundScriptService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+
+        try {
+            android.os.Process.killProcess(myScriptProcess.getPid());
+        } catch (Exception e) {
+            Log.e("BackgroundScriptService", e.getMessage());
+        }
+
+        Log.d("BackgroundScriptService", "onDestroy killing process");
     }
 
     @Override
@@ -103,7 +114,8 @@ public class BackgroundScriptService extends Service {
         instance = this;
         this.killMe = false;
 
-        new startMyAsyncTask().execute(startId);
+        mStartMyAsyncTask = new startMyAsyncTask();
+        mStartMyAsyncTask.execute(startId);
 
         return super.onStartCommand(intent, flags, startId);
     }

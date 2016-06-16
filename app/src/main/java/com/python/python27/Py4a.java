@@ -18,10 +18,15 @@ import java.util.ArrayList;
 public class Py4a {
 
     private Context context;
-    private ArrayList<Class<?>> services = new ArrayList<>();
+    private Intent intentScriptService;
+    private Intent intentBackgroundScriptService;
+    private static final String TAG = "Py4a";
 
     public Py4a(Context context) {
         this.context = context;
+
+        intentScriptService = new Intent(context, ScriptService.class);
+        intentBackgroundScriptService = new Intent(context, BackgroundScriptService.class);
     }
 
     public void launchScript(Object... params) {
@@ -29,7 +34,7 @@ public class Py4a {
         if (isInstallNeeded()) {
             new InstallAsyncTask().execute();
         } else {
-            runScriptService();
+            new UpdateAsyncTask().execute();
         }
     }
 
@@ -67,13 +72,20 @@ public class Py4a {
         }
     }
 
-    private void runScriptService() {
-        if (GlobalConstants.IS_FOREGROUND_SERVICE) {
-            context.startService(new Intent(context, ScriptService.class));
-            services.add(ScriptService.class);
-        } else {
-            context.startService(new Intent(context, BackgroundScriptService.class).putExtra("extras", "crazy parameters"));
-            services.add(BackgroundScriptService.class);
+    public class UpdateAsyncTask extends AsyncTask<Void, Integer, Boolean> {
+        @Override
+        protected Boolean doInBackground(Void... params) {
+            Log.i(GlobalConstants.LOG_TAG, "Updating...");
+
+            updatePython();
+
+            // TODO
+            return true;
+        }
+
+        @Override
+        protected void onPostExecute(Boolean installStatus) {
+            runScriptService();
         }
     }
 
@@ -118,9 +130,56 @@ public class Py4a {
         }
     }
 
-    public void destroy() {
-        for (Class<?> cls : this.services) {
-            context.stopService(new Intent(context, cls));
+    /**
+     * Function to update the python files in the root directory.
+     */
+    private void updatePython() {
+        String name, sFileName;
+        InputStream content;
+
+        R.raw a = new R.raw();
+        java.lang.reflect.Field[] t = R.raw.class.getFields();
+        Resources resources = context.getResources();
+
+        boolean succeed = true;
+
+        for (int i = 0; i < t.length; i++) {
+            try {
+                name = resources.getText(t[i].getInt(a)).toString();
+                sFileName = name.substring(name.lastIndexOf('/') + 1, name.length());
+                content = context.getResources().openRawResource(t[i].getInt(a));
+                content.reset();
+
+                if (sFileName.endsWith(GlobalConstants.PYTHON_PROJECT_ZIP_NAME)) {
+                    succeed &= Utils.unzip(content, context.getFilesDir().getAbsolutePath() + "/", true, true);
+                }
+            } catch (Exception e) {
+                Log.e(GlobalConstants.LOG_TAG, "Failed to update resources", e);
+                succeed = false;
+            }
         }
+    }
+
+    private void runScriptService() {
+        if (GlobalConstants.IS_FOREGROUND_SERVICE) {
+            context.startService(intentScriptService);
+        } else {
+            context.startService(intentBackgroundScriptService);
+        }
+    }
+
+    private void killScriptService() {
+        if (GlobalConstants.IS_FOREGROUND_SERVICE) {
+            context.stopService(intentScriptService);
+        } else {
+            context.stopService(intentBackgroundScriptService);
+        }
+    }
+
+    /**
+     * Function to stop the running services.
+     */
+    public void destroy() {
+        killScriptService();
     }
 }

@@ -1,0 +1,2 @@
+def myOtherFunction():
+	return 'myOtherFunction'
