@@ -22,6 +22,12 @@ public class BaseStation implements Serializable {
 
     public BaseStation() {}
 
+    public BaseStation(ScanResult scanResult) {
+        this.ssid = scanResult.SSID;
+        this.bssid = scanResult.BSSID;
+        this.mac = scanResult.BSSID;
+    }
+
     public BaseStation(ScanResult scanResult, LatLng latLng) {
         this.ssid = scanResult.SSID;
         this.bssid = scanResult.BSSID;

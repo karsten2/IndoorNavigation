@@ -1,20 +1,35 @@
 package com.indoornavigation.View;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.Uri;
+import android.net.wifi.ScanResult;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.support.v4.app.Fragment;
+import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
 
+import com.google.android.gms.common.api.BooleanResult;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.vision.text.Text;
+import com.indoornavigation.Adapter.WifiAdapter;
+import com.indoornavigation.Helper.Utils;
+import com.indoornavigation.Math.DataSmoothing;
+import com.indoornavigation.Services.WifiScanner;
 import com.parrot.arsdk.arcontroller.ARControllerCodec;
 import com.indoornavigation.Controller.DroneController;
 import com.indoornavigation.Model.BaseStation;
@@ -24,26 +39,21 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
-/**
- * A simple {@link Fragment} subclass.
- * Activities that contain this fragment must implement the
- * {@link RssiFragment.OnFragmentInteractionListener} interface
- * to handle interaction events.
- * Use the {@link RssiFragment#newInstance} factory method to
- * create an instance of this fragment.
- */
 public class RssiFragment extends Fragment {
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
-
-    // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
 
     private OnFragmentInteractionListener mListener;
+    private boolean write = false;
+    private int distance = -1;
+    private ArrayList<ArrayList<BaseStation>> allResults = new ArrayList<>();
+    private Button btnStart;
+    private WifiAdapter wifiAdapter;
+    private ArrayList<ScanResult> scanResults = new ArrayList<>();
+    private BaseStation bsFilter;
+    private TextView txtFilter;
+    private EditText txtNumber;
 
     public RssiFragment() {
         // Required empty public constructor
@@ -52,17 +62,11 @@ public class RssiFragment extends Fragment {
     /**
      * Use this factory method to create a new instance of
      * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
      * @return A new instance of fragment RssiFragment.
      */
-    // TODO: Rename and change types and number of parameters
-    public static RssiFragment newInstance(String param1, String param2) {
+    public static RssiFragment newInstance() {
         RssiFragment fragment = new RssiFragment();
         Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
         fragment.setArguments(args);
         return fragment;
     }
@@ -70,38 +74,54 @@ public class RssiFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
-        }
+        getContext().registerReceiver(
+                broadcastReceiver, new IntentFilter(WifiScanner.TAG));
     }
 
     DroneController.Listener mDroneControllerListener = new DroneController.Listener() {
         @Override
-        public void checkPointReachedListener(Marker marker) {
-
-        }
+        public void checkPointReachedListener(Marker marker) { }
 
         @Override
-        public void videoReceivedListener(ARControllerCodec codec) {
-
-        }
+        public void videoReceivedListener(ARControllerCodec codec) { }
 
         @Override
-        public void onDroneConnectionChangedListener(boolean connected) {
-
-        }
+        public void onDroneConnectionChangedListener(boolean connected) { }
 
         @Override
-        public void positionChangedListener(LatLng latLng, float bearing) {
-
-        }
+        public void positionChangedListener(LatLng latLng, float bearing) { }
 
         @Override
         public void onWifiScanlistChanged(ArrayList<BaseStation> baseStations) {
             try{
-                for (BaseStation bs : baseStations) {
-                    writeData(bs.toString());
+                if (write) {
+                    DataSmoothing.SRegression sRegression = new DataSmoothing.SRegression();
+                    DataSmoothing.MovingAverage movingAverage = new DataSmoothing.MovingAverage(3);
+                    List<Double> dataRaw = new ArrayList<>();
+                    List<Double> dataRegression = new ArrayList<>();
+                    List<Double> dataMovingAverage = new ArrayList<>();
+
+                    for (BaseStation bs : baseStations) {
+                        if (bsFilter != null && bsFilter.getSsid().equals(bs.getSsid())) {
+                            double bsDistance = bs.getDistance();
+                            sRegression.addData(distance, bsDistance);
+                            movingAverage.add(bsDistance);
+
+                            dataRaw.add(bs.getDistance());
+                            dataRegression.add(sRegression.getIntercept());
+                            dataMovingAverage.add(movingAverage.getAverage());
+
+                            String writer = ":" + sRegression.getIntercept() + ":"
+                                    + movingAverage.getAverage();
+                            writeData(bs.toString() + writer);
+                        }
+                    }
+
+                    if (dataRaw.size() > 0) {
+                        double rawMedian = DataSmoothing.getMedian(dataRaw.toArray());
+                        dataRaw.
+                    }
+
                 }
             } catch (IOException e) {
                 Log.e("csv writing", e.getMessage());
@@ -123,29 +143,56 @@ public class RssiFragment extends Fragment {
         DroneController droneController = new DroneController(getContext());
         droneController.setListener(mDroneControllerListener);
 
-        EditText txtNumber = (EditText) view.findViewById(R.id.txtNumber);
-
-        Button btnStart = (Button) view.findViewById(R.id.btnStart);
-        if (btnStart != null) {
-            btnStart.setOnClickListener(new View.OnClickListener() {
+        Button btnAddFilter = (Button) view.findViewById(R.id.btnAddFilter);
+        if (btnAddFilter != null) {
+            btnAddFilter.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    // TODO start tracking
+                    wifiDialog();
+                }
+            });
+        }
+
+        txtFilter = (TextView) view.findViewById(R.id.txtFilter);
+
+        txtNumber = (EditText) view.findViewById(R.id.txtNumber);
+
+        btnStart = (Button) view.findViewById(R.id.btnStart);
+        if (btnStart != null) {
+            btnStart.setOnClickListener(new View.OnClickListener() {
+
+                @Override
+                public void onClick(View v) {
+
+                    if (txtNumber != null) {
+                        distance = Integer.parseInt(txtNumber.getText().toString());
+                    }
+
+                    new AsyncTask() {
+                        @Override
+                        protected Object doInBackground(Object[] params) {
+                            Toast.makeText(getContext(), "Starte Aufzeichnung für 10 Sekunden.",
+                                    Toast.LENGTH_SHORT);
+
+                            write = true;
+                            try {
+                                TimeUnit.SECONDS.sleep(10);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                            write = false;
+
+                            Toast.makeText(getContext(), "Aufzeichnung beendet.",
+                                    Toast.LENGTH_SHORT);
+                            return null;
+                        }
+                    };
                 }
             });
         }
 
         return view;
     }
-
-    Handler handler = new Handler();
-    Runnable runnable = new Runnable() {
-        @Override
-        public void run() {
-
-
-        }
-    };
 
     FileWriter fileWriter;
 
@@ -164,18 +211,90 @@ public class RssiFragment extends Fragment {
         fileWriter = new FileWriter(f, true);
     }
 
+    /**
+     * Function to create a dialog box, that ist filled by all nearby wifi networks.
+     * Selecting a wifi network will add the router to the radiomap database.
+     */
+    private void wifiDialog() {
+
+        // start wifi service
+        Utils.startService(WifiScanner.class, getActivity());
+        wifiAdapter = new WifiAdapter(getActivity(), scanResults);
+
+        final AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        builder.setTitle("Select Access Point");
+
+        builder.setNegativeButton("Abbrechen", null);
+
+        builder.setAdapter(wifiAdapter,
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        bsFilter = new BaseStation(wifiAdapter.getItem(which));
+                        if (txtFilter != null)
+                            txtFilter.setText(bsFilter.getSsid());
+                    }
+                });
+
+        builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                Utils.stopService(WifiScanner.class, getActivity());
+            }
+        });
+
+        builder.create().show();
+    }
+
+    private String postCompute() {
+
+        if (allResults != null) {
+
+
+            for (ArrayList<BaseStation> arrBs : allResults) {
+                for (BaseStation bs : arrBs) {
+
+                }
+            }
+        }
+
+        return "";
+    }
+
+    private final static String TAG = "RssiFragment";
+    BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            try {
+                wifiAdapter.clear();
+                wifiAdapter.addAll((ArrayList<ScanResult>) intent.getExtras().get("scanResults"));
+                wifiAdapter.notifyDataSetChanged();
+                Log.d(TAG, "received data: " + scanResults.size());
+            } catch (ClassCastException e) {
+                Log.e(TAG, "wifi receiver onReceive" + e.getMessage());
+            }
+        }
+    };
+
     @Override
     public void onDestroy() {
         super.onDestroy();
 
         try {
-            fileWriter.close();
+            getContext().unregisterReceiver(broadcastReceiver);
         } catch (Exception e) {
+            Log.e(TAG, "Tried to unregister not registerd reciever");
+        }
 
+        try {
+            if (fileWriter != null) {
+                fileWriter.close();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
         }
     }
 
-    // TODO: Rename method, update argument and hook method into UI event
     public void onButtonPressed(Uri uri) {
         if (mListener != null) {
             mListener.onFragmentInteraction(uri);
@@ -199,18 +318,7 @@ public class RssiFragment extends Fragment {
         mListener = null;
     }
 
-    /**
-     * This interface must be implemented by activities that contain this
-     * fragment to allow an interaction in this fragment to be communicated
-     * to the activity and potentially other fragments contained in that
-     * activity.
-     * <p/>
-     * See the Android Training lesson <a href=
-     * "http://developer.android.com/training/basics/fragments/communicating.html"
-     * >Communicating with Other Fragments</a> for more information.
-     */
     public interface OnFragmentInteractionListener {
-        // TODO: Update argument type and name
         void onFragmentInteraction(Uri uri);
     }
 }

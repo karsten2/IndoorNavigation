@@ -70,4 +70,10 @@ public abstract class PythonDataController {
     public static class WeightedAverage {
 
     }
+
+    public static class kNearestNeighbor {
+        public static void testKNN() {
+            state = 3;
+        }
+    }
 }

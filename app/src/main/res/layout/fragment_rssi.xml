@@ -1,21 +1,50 @@
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.indoornavigation.View.RssiFragment">
-
-    <!-- TODO: Update blank fragment layout -->
-
-    <EditText
-        android:layout_width="100dp"
-        android:layout_height="wrap_content"
-        android:id="@+id/txtNumber"
-        android:layout_gravity="left|top" />
+    android:orientation="vertical"
+    tools:context="com.indoornavigation.View.RssiFragment"
+    android:padding="15dp">
 
     <Button
+        android:id="@+id/btnAddFilter"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_gravity="center"
+        android:layout_weight="0"
+        android:text="Add Filter" />
+
+    <TextView
+        android:id="@+id/txtFilter"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="New Button"
+        android:layout_centerHorizontal="true"
+        android:text="_______________"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:layout_marginTop="20dp"
+        android:layout_gravity="center"/>
+
+    <EditText
+        android:id="@+id/txtNumber"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_gravity="center"
+        android:layout_marginTop="20dp"
+        android:inputType="number"
+        android:labelFor="@string/fragment_rssi_distance_input" />
+
+    <Button
         android:id="@+id/btnStart"
-        android:layout_gravity="center_horizontal|top" />
-</FrameLayout>
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/txtNumber"
+        android:layout_centerHorizontal="true"
+        android:layout_gravity="center"
+        android:layout_weight="0"
+        android:text="Start" />
+
+</LinearLayout>
+

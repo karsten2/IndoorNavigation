@@ -2,6 +2,7 @@ package com.indoornavigation.Controller;
 
 import com.indoornavigation.View.DroneFragment;
 import com.indoornavigation.View.MapFragment;
+import com.indoornavigation.View.RssiFragment;
 import com.indoornavigation.View.SqliteFragment;
 import com.indoornavigation.View.WifiFragment;
 import com.indoor.navigation.indoornavigation.R;
@@ -30,7 +31,8 @@ public class MainActivity extends AppCompatActivity
         MapFragment.OnFragmentInteractionListener,
         WifiFragment.OnFragmentInteractionListener,
         SqliteFragment.OnFragmentInteractionListener,
-        DroneFragment.OnFragmentInteractionListener {
+        DroneFragment.OnFragmentInteractionListener,
+        RssiFragment.OnFragmentInteractionListener {
 
     private static final String TAG = "MainActivity";
 
@@ -130,9 +132,8 @@ public class MainActivity extends AppCompatActivity
                 if (actionBar != null) actionBar.setTitle(R.string.title_fragment_sqlite);
             } else if (id == R.id.nav_drone) {
                 fragment = DroneFragment.class.newInstance();
-            } else if (id == R.id.nav_python) {
-                this.startActivity(new Intent(this, ScriptActivity.class));
-                throw new Exception("dummy exception");
+            } else if (id == R.id.nav_data) {
+                fragment = RssiFragment.class.newInstance();
             }
 
             FragmentManager fragmentManager = getSupportFragmentManager();

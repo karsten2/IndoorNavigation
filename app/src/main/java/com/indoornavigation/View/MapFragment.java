@@ -46,6 +46,7 @@ import com.googlecode.android_scripting.facade.FacadeConfiguration;
 import com.googlecode.android_scripting.facade.FacadeManager;
 import com.googlecode.android_scripting.jsonrpc.RpcReceiverManager;
 import com.indoornavigation.Controller.PythonDataController;
+import com.indoornavigation.Math.Knn;
 import com.parrot.arsdk.arcontroller.ARControllerCodec;
 import com.indoornavigation.Adapter.WifiAdapter;
 import com.indoornavigation.Controller.DroneController;
@@ -190,10 +191,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 public void onClick(View v) {
                     droneController.EmergencyLand();
                     fabStart.setVisibility(View.VISIBLE);
-                    py4a = new Py4a(getContext());
-                    py4a.launchScript();
 
-                    PythonDataController.MovingAverage.TestMovingAverage();
+                    Knn.main();
                 }
             });
         }

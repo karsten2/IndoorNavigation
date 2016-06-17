@@ -1,5 +1,6 @@
 import android, time
 import mymovingaverage
+import knn
 
 droid = android.Android()
 droid.sendMessage("Main script successfully started")
@@ -9,9 +10,12 @@ while state:
     if state == 2:
         params = droid.getMovingAverageParameter().result
         result = mymovingaverage.getMovingaverage(params['data'], params['windowSize'])
-        droid.sendMessage('Result' + str(result))
         droid.setMovingAverage(result)
-        droid.makeToast("Moving Average: " + str(result))
+        droid.resetState()
+    if state == 3:
+        droid.sendMessage('run knn main')
+        knn.main()
+
         droid.resetState()
 
     state = droid.getState().result
