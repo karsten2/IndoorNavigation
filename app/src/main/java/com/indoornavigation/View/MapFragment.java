@@ -41,11 +41,6 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
-import com.googlecode.android_scripting.facade.CustomDataFacade;
-import com.googlecode.android_scripting.facade.FacadeConfiguration;
-import com.googlecode.android_scripting.facade.FacadeManager;
-import com.googlecode.android_scripting.jsonrpc.RpcReceiverManager;
-import com.indoornavigation.Controller.PythonDataController;
 import com.indoornavigation.Math.Knn;
 import com.parrot.arsdk.arcontroller.ARControllerCodec;
 import com.indoornavigation.Adapter.WifiAdapter;
@@ -57,8 +52,6 @@ import com.indoornavigation.Model.BaseStation;
 import com.indoornavigation.Model.CustomPolyLine;
 import com.indoor.navigation.indoornavigation.R;
 import com.indoornavigation.Services.WifiScanner;
-import com.python.python27.BackgroundScriptService;
-import com.python.python27.Py4a;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -86,8 +79,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private Marker mMarkerDronePosition;
 
     private CustomPolyLine route;
-    //private ArrayList<Marker> route = new ArrayList<>();
-    //private ArrayList<Polyline> polylines = new ArrayList<>();
     private boolean addRoute = false;
 
     private BitmapDescriptor iconStart, iconRoute, iconDone;
@@ -97,8 +88,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private DroneController droneController;
 
     private OnFragmentInteractionListener mListener;
-
-    private Py4a py4a;
 
     private final DroneController.Listener mDroneControllerListener = new DroneController.Listener() {
         @Override
@@ -571,8 +560,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             Log.e(TAG, "Try to unregister reciever" + e.getMessage());
         }
 
-        if (py4a != null) py4a.destroy();
-
         Utils.stopService(WifiScanner.class, getActivity());
     }
 
@@ -585,9 +572,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         } catch (Exception e) {
             Log.e(TAG, "Try to unregister reciever" + e.getMessage());
         }
-
-        if (py4a != null) py4a.destroy();
-
 
         if (droneController!= null) droneController.destroy();
         Utils.stopService(WifiScanner.class, getActivity());

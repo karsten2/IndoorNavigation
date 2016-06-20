@@ -6,7 +6,13 @@ public class SRegression {
 
     SimpleRegression regression = new SimpleRegression();
 
-    public SRegression() {
+    public SRegression() { }
+
+    /**
+     * Adding testdata, used in the process of development to the regression.
+     * @param useDefaultData 2d double array.
+     */
+    public SRegression(boolean useDefaultData) {
         regression.addData(-25, 0.1);
         regression.addData(-31, 0.5);
         regression.addData(-37, 1  );
@@ -18,12 +24,28 @@ public class SRegression {
     }
 
     /**
+     * Constructor
+     * @param data 2d double array.
+     */
+    public SRegression(double[][] data) {
+        regression.addData(data);
+    }
+
+    /**
      * Adding data to Dataset.
      * @param x value 1
      * @param y value 2
      */
     public void addData(double x, double y) {
         regression.addData(x, y);
+    }
+
+    /**
+     * Adding data to Dataset.
+     * @param data 2d array of double values.
+     */
+    public void addData(double[][] data) {
+        regression.addData(data);
     }
 
     /**

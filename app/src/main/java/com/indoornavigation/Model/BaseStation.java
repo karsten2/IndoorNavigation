@@ -138,6 +138,6 @@ public class BaseStation implements Serializable {
 
     @Override
     public String toString() {
-        return timeStamp + ";" + ssid + ";" + distance;
+        return timeStamp + ";" + ssid;
     }
 }

@@ -25,14 +25,12 @@ android {
 }
 
 dependencies {
-    compile files('libs/script.jar')
     testCompile 'junit:junit:4.12'
 
     compile 'com.android.support:design:23.4.0'
     compile 'com.android.support:support-v4:23.4.0'
     compile 'com.android.support:appcompat-v7:23.4.0'
 
-    compile 'com.google.guava:guava:19.0'
     compile 'com.google.android.gms:play-services:9.0.2'
     compile 'com.google.maps.android:android-maps-utils:0.4'
 

@@ -23,16 +23,19 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
         SQLiteDatabase db = this.getWritableDatabase();
 
-        Log.d("sql", DbTables.RadioMap.SQL_CREATE_ENTRIES);
+        Log.d("sql", DbTables.RadioMap.SQL_CREATE_ENTRIES +
+                "\n" + DbTables.ApRegressionValues.SQL_CREATE_ENTRIES);
         db.execSQL(DbTables.RadioMap.SQL_CREATE_ENTRIES);
+        db.execSQL(DbTables.ApRegressionValues.SQL_CREATE_ENTRIES);
     }
 
     @Override
     public void onCreate(SQLiteDatabase db) {
         //db.execSQL(DbTables.RadioMap.SQL_DROP_TABLE);
 
-        Log.d("sql", DbTables.RadioMap.SQL_CREATE_ENTRIES);
+        Log.d("sql", "Trying to create sql tables, if not exists...");
         db.execSQL(DbTables.RadioMap.SQL_CREATE_ENTRIES);
+        db.execSQL(DbTables.ApRegressionValues.SQL_CREATE_ENTRIES);
     }
 
     @Override

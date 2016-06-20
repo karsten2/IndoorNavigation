@@ -12,26 +12,30 @@ import java.util.List;
  */
 public class Statistics {
 
-    private static DescriptiveStatistics stats = new DescriptiveStatistics();
+    private DescriptiveStatistics stats = new DescriptiveStatistics();
 
-    public static void add(Double value) {
+    public Statistics(int windowSize) {
+        stats.setWindowSize(windowSize);
+    }
+
+    public void add(Double value) {
         stats.addValue(value);
     }
 
-    public static void add(List<Double> values) {
+    public void add(List<Double> values) {
         for (double d : values) {
             stats.addValue(d);
         }
     }
 
-    public static void setValues (List<Double> values) {
+    public void setValues (List<Double> values) {
         stats.clear();
         for (double d : values) {
             stats.addValue(d);
         }
     }
 
-    public static void clear() {
+    public void clear() {
         stats.clear();
     }
 
@@ -40,19 +44,19 @@ public class Statistics {
      *      If window size = 100: creates the statistics of the most recent 100 values.
      * @param windowSize Size of the window.
      */
-    public static void setWindowSize(int windowSize) {
+    public void setWindowSize(int windowSize) {
         stats.setWindowSize(windowSize);
     }
 
-    public static double getMean() {
+    public double getMean() {
         return stats.getMean();
     }
 
-    public static double getStandardDeviation() {
+    public double getStandardDeviation() {
         return stats.getStandardDeviation();
     }
 
-    public static double getMedian() {
+    public double getMedian() {
         return stats.getPercentile(50);
     }
 

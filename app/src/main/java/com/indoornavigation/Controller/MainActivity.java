@@ -6,10 +6,9 @@ import com.indoornavigation.View.RssiFragment;
 import com.indoornavigation.View.SqliteFragment;
 import com.indoornavigation.View.WifiFragment;
 import com.indoor.navigation.indoornavigation.R;
-import com.python.python27.ScriptActivity;
 
 import android.content.DialogInterface;
-import android.content.Intent;
+
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.NavigationView;

@@ -5,12 +5,12 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.database.Cursor;
 import android.net.Uri;
 import android.net.wifi.ScanResult;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
@@ -20,16 +20,13 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import com.google.android.gms.common.api.BooleanResult;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.vision.text.Text;
-import com.google.common.math.DoubleMath;
 import com.indoornavigation.Adapter.WifiAdapter;
+import com.indoornavigation.Database.DbTables;
+import com.indoornavigation.Database.SQLiteDBHelper;
 import com.indoornavigation.Helper.Utils;
-import com.indoornavigation.Math.DataSmoothing;
 import com.indoornavigation.Math.SRegression;
 import com.indoornavigation.Math.Statistics;
 import com.indoornavigation.Services.WifiScanner;
@@ -43,7 +40,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class RssiFragment extends Fragment {
@@ -56,8 +52,16 @@ public class RssiFragment extends Fragment {
     private ArrayList<ScanResult> scanResults = new ArrayList<>();
     private BaseStation bsFilter;
     private TextView txtFilter;
-    private final String fileHeader = "DATE;SSID;DISTANCE;RAW;MEAN;MEDIAN\n";
+    private final String fileHeader =
+            "DATE;SSID;DISTANCE;RAW;MEAN_5;MEAN_10;MEAN_20;MEDIAN_5;MEDIAN_10;MEDIAN_20"
+                    + ";PREDICTION_RAW;PREDICTION_MEAN_5;PREDICTION_MEAN_10;PREDICTION_MEAN_20"
+                    + ";PREDICTION_MEDIAN_5;PREDICTION_MEDIAN_10;PREDICTION_MEDIAN_20"
+                    + ";PROX_CALC_RAW;PROX_CALC_MEAN_5;PROX_CALC_MEAN_10;PROX_CALC_MEAN_20"
+                    + ";PROX_CALC_MEDIAN_5;PROX_CALC_MEDIAN_10;PROX_CALC_MEDIAN_20";
     private BufferedWriter bw;
+    private SQLiteDBHelper dbHelper;
+
+    Statistics statistics_5, statistics_10, statistics_20;
 
     private boolean creatingStatistics = false;
 
@@ -65,24 +69,13 @@ public class RssiFragment extends Fragment {
         // Required empty public constructor
     }
 
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @return A new instance of fragment RssiFragment.
-     */
-    public static RssiFragment newInstance() {
-        RssiFragment fragment = new RssiFragment();
-        Bundle args = new Bundle();
-        fragment.setArguments(args);
-        return fragment;
-    }
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getContext().registerReceiver(
                 broadcastReceiver, new IntentFilter(WifiScanner.TAG));
+
+        dbHelper = new SQLiteDBHelper(getContext());
     }
 
     DroneController.Listener mDroneControllerListener = new DroneController.Listener() {
@@ -104,39 +97,23 @@ public class RssiFragment extends Fragment {
 
         @Override
         public void onWifiScanlistChanged(ArrayList<BaseStation> baseStations) {
-            Log.d("Drone rssi", "wifi detected: " + baseStations.size()
-                    + "\n" + write + " : " + creatingStatistics);
-            if (!test && bsFilter != null && bsFilter.getSsid() != null)
-                test(new ArrayList<BaseStation>(baseStations));
+            Log.d("Drone rssi", "wifi detected: " + baseStations.size());
+
             if (write && !creatingStatistics) {
                 createStatistics(new ArrayList<BaseStation>(baseStations));
             }
         }
     };
 
-    boolean test = false;
-    private void test(ArrayList<BaseStation> baseStations) {
-        test = true;
-        for (BaseStation bs : baseStations) {
-            if (bs.getSsid() != null && bs.getSsid().equals(bsFilter.getSsid())) {
-                SRegression sRegression = new SRegression();
-                double prediction = sRegression.getPrediction(bs.getDistance());
-                double calcPrecision = calculateDistance(bs.getDistance(), 2457);
-                Log.d("SRegression", "RSSI: " + bs.getDistance()
-                        + "\nPrediction: " + prediction
-                        + "\nCalculated Distance: " + calcPrecision);
-            }
-        }
-        test = false;
-    }
-
     /**
+     * Function to calculate the distance in meters from dbm rssi values.
      * http://rvmiller.com/2013/05/part-1-wifi-based-trilateration-on-android/
-     * @param levelInDb
-     * @param freqInMHz
-     * @return
+     *
+     * @param levelInDb RSSI value.
+     * @param freqInMHz Frequency of the sending device.
+     * @return Distance in meters.
      */
-    private double calculateDistance(double levelInDb, double freqInMHz)    {
+    private double calculateDistance(double levelInDb, double freqInMHz) {
         double exp = (27.55 - (20 * Math.log10(freqInMHz)) + Math.abs(levelInDb)) / 20.0;
         return Math.pow(10.0, exp);
     }
@@ -172,8 +149,10 @@ public class RssiFragment extends Fragment {
                     if (txtNumber != null)
                         distance = Double.valueOf(txtNumber.getText().toString());
 
-                    Statistics.clear();
-                    Statistics.setWindowSize(20);
+                    statistics_5 = new Statistics(5);
+                    statistics_10 = new Statistics(10);
+                    statistics_20 = new Statistics(20);
+
                     MyTask myTask = new MyTask();
 
                     try {
@@ -222,6 +201,7 @@ public class RssiFragment extends Fragment {
 
     /**
      * Function that creates a buffered writer to write to the smartphones download directory.
+     *
      * @param fileTag Addition to the filename (Name is always: AnalysisData->fileTag<-.csv
      * @return buffered writer.
      * @throws IOException
@@ -281,34 +261,64 @@ public class RssiFragment extends Fragment {
         }
     };
 
-    /*private void testCreateStatistics(ArrayList<ScanResult> scanResults) {
-        if (write) {
-            ArrayList<BaseStation> baseStations = new ArrayList<>();
+    /*
+    "DATE;SSID;DISTANCE;RAW;MEAN_5;MEAN_10;MEAN_20;MEDIAN_5;MEDIAN_10;MEDIAN_20"
+            + ";PREDICTION_RAW;PREDICTION_MEAN_5;PREDICTION_MEAN_10;PREDICTION_MEAN_20"
+            + ";PREDICTION_MEDIAN_5;PREDICTION_MEDIAN_10;PREDICTION_MEDIAN_20"
+            + ";PROX_CALC_RAW;PROX_CALC_MEAN_5;PROX_CALC_MEAN_10;PROX_CALC_MEAN_20"
+            + ";PROX_CALC_MEDIAN_5;PROX_CALC_MEDIAN_10;PROX_CALC_MEDIAN_20";
 
-            for (ScanResult sr : scanResults) {
-                BaseStation bs = new BaseStation();
-                bs.setSsid(sr.SSID);
-                bs.setDistance(sr.level);
-                baseStations.add(bs);
-            }
-            createStatistics(baseStations);
-        }
-    }*/
-
+    */
     private void createStatistics(ArrayList<BaseStation> baseStations) {
         try {
             creatingStatistics = true;
             for (BaseStation bs : baseStations) {
                 if (bsFilter != null && bsFilter.getSsid().equals(bs.getSsid())) {
-                    double bsDistance = bs.getDistance();
-                    Statistics.add(bs.getDistance());
+                    double rssiRaw = bs.getDistance();
+                    double freqMhz = 2457;
 
-                    String writer = distance
-                            + ";" + Statistics.getMean()
-                            + ";" + Statistics.getMedian() + "\n";
+                    SRegression sRegression = new SRegression(true);
+
+                    statistics_5.add(bs.getDistance());
+                    statistics_10.add(bs.getDistance());
+                    statistics_20.add(bs.getDistance());
+
+                    double mean_5 = statistics_5.getMean();
+                    double mean_10 = statistics_10.getMean();
+                    double mean_20 = statistics_20.getMean();
+
+                    double median_5 = statistics_5.getMedian();
+                    double median_10 = statistics_10.getMedian();
+                    double median_20 = statistics_20.getMedian();
+
+                    double predictionRaw = sRegression.getPrediction(rssiRaw);
+                    double predictionMean_5 = sRegression.getPrediction(mean_5);
+                    double predictionMean_10 = sRegression.getPrediction(mean_10);
+                    double predictionMean_20 = sRegression.getPrediction(mean_20);
+                    double predictionMedian_5 = sRegression.getPrediction(median_5);
+                    double predictionMedian_10 = sRegression.getPrediction(median_10);
+                    double predictionMedian_20 = sRegression.getPrediction(median_20);
+
+                    double proxCalcRaw = calculateDistance(rssiRaw, freqMhz);
+                    double proxCalcMean_5 = calculateDistance(mean_5, freqMhz);
+                    double proxCalcMean_10 = calculateDistance(mean_10, freqMhz);
+                    double proxCalcMean_20 = calculateDistance(mean_20, freqMhz);
+                    double proxCalcMedian_5 = calculateDistance(median_5, freqMhz);
+                    double proxCalcMedian_10 = calculateDistance(median_10, freqMhz);
+                    double proxCalcMedian_20 = calculateDistance(median_20, freqMhz);
+
+
+                    String writer = distance + ";" + rssiRaw
+                            + ";" + mean_5 + ";" + mean_10 + ";" + mean_20
+                            + ";" + median_5 + ";" + median_10 + ";" + median_20
+                            + ";" + predictionRaw
+                            + ";" + predictionMean_5 + ";" + predictionMean_10 + ";" + predictionMean_20
+                            + ";" + predictionMedian_5 + ";" + predictionMedian_10 + ";" + predictionMedian_20
+                            + ";" + proxCalcRaw
+                            + ";" + proxCalcMean_5 + ";" + proxCalcMean_10 + ";" + proxCalcMean_20
+                            + ";" + proxCalcMedian_5 + ";" + proxCalcMedian_10 + ";" + proxCalcMedian_20;
 
                     writeData(bs.toString() + writer);
-                    Log.d("CSV", bs.toString() + writer);
                 }
             }
             creatingStatistics = false;
@@ -316,6 +326,35 @@ public class RssiFragment extends Fragment {
             Log.e("csv writing", e.getMessage());
             creatingStatistics = false;
         }
+    }
+
+    private double[][] getRegressionValuesFromDb(BaseStation baseStation) {
+
+        if (dbHelper != null) {
+            Cursor cursor = dbHelper.rawQuery(
+                    "SELECT x, y " +
+                    "FROM " + DbTables.ApRegressionValues.TABLE_NAME + " regr, " +
+                    DbTables.RadioMap.TABLE_NAME + " rmap " +
+                    "WHERE regr.ap_id = rmap._id " +
+                    "AND rmap._id in (" +
+                            "SELECT _id " +
+                            "FROM " + DbTables.RadioMap.TABLE_NAME + " " +
+                            "WHERE ssid = '" + baseStation.getSsid() + "')");
+
+            double[][] regrValues = new double[cursor.getCount()][cursor.getCount()];
+            int index = 0;
+
+            if (cursor.moveToFirst()) {
+                do {
+                    regrValues[index][0] = cursor.getDouble(cursor.getColumnIndex("x"));
+                    regrValues[index][1] = cursor.getDouble(cursor.getColumnIndex("y"));
+
+                    index++;
+                } while (cursor.moveToNext());
+            }
+            return regrValues;
+        }
+        return new double[][]{};
     }
 
     @Override
@@ -336,12 +375,6 @@ public class RssiFragment extends Fragment {
             }
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
-        }
-    }
-
-    public void onButtonPressed(Uri uri) {
-        if (mListener != null) {
-            mListener.onFragmentInteraction(uri);
         }
     }
 
