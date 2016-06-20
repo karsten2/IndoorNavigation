@@ -29,12 +29,14 @@ import com.google.android.gms.vision.text.Text;
 import com.indoornavigation.Adapter.WifiAdapter;
 import com.indoornavigation.Helper.Utils;
 import com.indoornavigation.Math.DataSmoothing;
+import com.indoornavigation.Math.Statistics;
 import com.indoornavigation.Services.WifiScanner;
 import com.parrot.arsdk.arcontroller.ARControllerCodec;
 import com.indoornavigation.Controller.DroneController;
 import com.indoornavigation.Model.BaseStation;
 import com.indoor.navigation.indoornavigation.R;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -54,6 +56,9 @@ public class RssiFragment extends Fragment {
     private BaseStation bsFilter;
     private TextView txtFilter;
     private EditText txtNumber;
+    private Statistics.SRegression sRegression;
+    private final String fileHeader = "DATE;BS;RAW;";
+    private BufferedWriter bw;
 
     public RssiFragment() {
         // Required empty public constructor
@@ -62,6 +67,7 @@ public class RssiFragment extends Fragment {
     /**
      * Use this factory method to create a new instance of
      * this fragment using the provided parameters.
+     *
      * @return A new instance of fragment RssiFragment.
      */
     public static RssiFragment newInstance() {
@@ -80,51 +86,25 @@ public class RssiFragment extends Fragment {
 
     DroneController.Listener mDroneControllerListener = new DroneController.Listener() {
         @Override
-        public void checkPointReachedListener(Marker marker) { }
+        public void checkPointReachedListener(Marker marker) {
+        }
 
         @Override
-        public void videoReceivedListener(ARControllerCodec codec) { }
+        public void videoReceivedListener(ARControllerCodec codec) {
+        }
 
         @Override
-        public void onDroneConnectionChangedListener(boolean connected) { }
+        public void onDroneConnectionChangedListener(boolean connected) {
+        }
 
         @Override
-        public void positionChangedListener(LatLng latLng, float bearing) { }
+        public void positionChangedListener(LatLng latLng, float bearing) {
+        }
 
         @Override
         public void onWifiScanlistChanged(ArrayList<BaseStation> baseStations) {
-            try{
-                if (write) {
-                    DataSmoothing.SRegression sRegression = new DataSmoothing.SRegression();
-                    DataSmoothing.MovingAverage movingAverage = new DataSmoothing.MovingAverage(3);
-                    List<Double> dataRaw = new ArrayList<>();
-                    List<Double> dataRegression = new ArrayList<>();
-                    List<Double> dataMovingAverage = new ArrayList<>();
-
-                    for (BaseStation bs : baseStations) {
-                        if (bsFilter != null && bsFilter.getSsid().equals(bs.getSsid())) {
-                            double bsDistance = bs.getDistance();
-                            sRegression.addData(distance, bsDistance);
-                            movingAverage.add(bsDistance);
-
-                            dataRaw.add(bs.getDistance());
-                            dataRegression.add(sRegression.getIntercept());
-                            dataMovingAverage.add(movingAverage.getAverage());
-
-                            String writer = ":" + sRegression.getIntercept() + ":"
-                                    + movingAverage.getAverage();
-                            writeData(bs.toString() + writer);
-                        }
-                    }
-
-                    if (dataRaw.size() > 0) {
-                        double rawMedian = DataSmoothing.getMedian(dataRaw.toArray());
-                        dataRaw.
-                    }
-
-                }
-            } catch (IOException e) {
-                Log.e("csv writing", e.getMessage());
+            if (write) {
+                createStatistics(baseStations);
             }
         }
     };
@@ -132,7 +112,7 @@ public class RssiFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        try{
+        try {
             createCsvWriter();
         } catch (IOException e) {
             Log.e("csv writing", e.getMessage());
@@ -164,29 +144,12 @@ public class RssiFragment extends Fragment {
                 @Override
                 public void onClick(View v) {
 
-                    if (txtNumber != null) {
-                        distance = Integer.parseInt(txtNumber.getText().toString());
-                    }
+                    Statistics.clear();
+                    sRegression = new Statistics.SRegression();
+                    Statistics.setWindowSize(5);
+                    MyTask myTask = new MyTask();
+                    myTask.execute();
 
-                    new AsyncTask() {
-                        @Override
-                        protected Object doInBackground(Object[] params) {
-                            Toast.makeText(getContext(), "Starte Aufzeichnung für 10 Sekunden.",
-                                    Toast.LENGTH_SHORT);
-
-                            write = true;
-                            try {
-                                TimeUnit.SECONDS.sleep(10);
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
-                            write = false;
-
-                            Toast.makeText(getContext(), "Aufzeichnung beendet.",
-                                    Toast.LENGTH_SHORT);
-                            return null;
-                        }
-                    };
                 }
             });
         }
@@ -194,21 +157,38 @@ public class RssiFragment extends Fragment {
         return view;
     }
 
-    FileWriter fileWriter;
+    private class MyTask extends AsyncTask {
+        @Override
+        protected Object doInBackground(Object[] params) {
+            Log.d("CSV", "Starte Aufzeichnung");
+
+            write = true;
+            try {
+                TimeUnit.SECONDS.sleep(60);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            write = false;
+            Log.d("CSV", "Aufzeichnung beendet");
+            return null;
+        }
+    }
 
     private void writeData(String data) throws IOException {
-        if (fileWriter != null) {
-            fileWriter.write(data);
+        if (bw != null) {
+            bw.write(data);
         }
     }
 
     private void createCsvWriter() throws IOException {
         String baseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
         String fileName = "AnalysisData.csv";
-        String filePath = baseDir + "/indoorNavigation" + File.separator + fileName;
-        File f = new File(filePath );
+        String filePath = baseDir + "/" + File.separator + fileName;
+        File f = new File(filePath);
 
-        fileWriter = new FileWriter(f, true);
+        FileWriter fw = new FileWriter(f, true);
+        bw = new BufferedWriter(fw);
+        bw.write(fileHeader);
     }
 
     /**
@@ -236,29 +216,14 @@ public class RssiFragment extends Fragment {
                     }
                 });
 
-        builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+        /*builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
             @Override
             public void onDismiss(DialogInterface dialog) {
                 Utils.stopService(WifiScanner.class, getActivity());
             }
-        });
+        });*/
 
         builder.create().show();
-    }
-
-    private String postCompute() {
-
-        if (allResults != null) {
-
-
-            for (ArrayList<BaseStation> arrBs : allResults) {
-                for (BaseStation bs : arrBs) {
-
-                }
-            }
-        }
-
-        return "";
     }
 
     private final static String TAG = "RssiFragment";
@@ -269,6 +234,7 @@ public class RssiFragment extends Fragment {
                 wifiAdapter.clear();
                 wifiAdapter.addAll((ArrayList<ScanResult>) intent.getExtras().get("scanResults"));
                 wifiAdapter.notifyDataSetChanged();
+                testCreateStatistics((ArrayList<ScanResult>) intent.getExtras().get("scanResults"));
                 Log.d(TAG, "received data: " + scanResults.size());
             } catch (ClassCastException e) {
                 Log.e(TAG, "wifi receiver onReceive" + e.getMessage());
@@ -276,9 +242,47 @@ public class RssiFragment extends Fragment {
         }
     };
 
+    private void testCreateStatistics(ArrayList<ScanResult> scanResults) {
+        if (write) {
+            ArrayList<BaseStation> baseStations = new ArrayList<>();
+
+            for (ScanResult sr : scanResults) {
+                BaseStation bs = new BaseStation();
+                bs.setSsid(sr.SSID);
+                bs.setDistance(sr.level);
+                baseStations.add(bs);
+            }
+            createStatistics(baseStations);
+        }
+    }
+
+    private void createStatistics(ArrayList<BaseStation> baseStations) {
+        try {
+
+            for (BaseStation bs : baseStations) {
+                if (bsFilter != null && bsFilter.getSsid().equals(bs.getSsid())) {
+                    double bsDistance = bs.getDistance();
+                    Statistics.add(bs.getDistance());
+                    sRegression.addData(bsDistance, distance);
+
+                    String writer = ";" + Statistics.getMean()
+                            + ";" + Statistics.getMedian();
+
+                    writeData(bs.toString() + writer);
+                    Log.d("CSV", bs.toString() + writer);
+
+                }
+            }
+        } catch (IOException e) {
+            Log.e("csv writing", e.getMessage());
+        }
+    }
+
     @Override
     public void onDestroy() {
         super.onDestroy();
+
+        //Utils.stopService(WifiScanner.class, getActivity());
 
         try {
             getContext().unregisterReceiver(broadcastReceiver);
@@ -287,8 +291,8 @@ public class RssiFragment extends Fragment {
         }
 
         try {
-            if (fileWriter != null) {
-                fileWriter.close();
+            if (bw != null) {
+                bw.close();
             }
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
