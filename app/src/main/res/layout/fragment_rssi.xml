@@ -33,7 +33,7 @@
         android:layout_alignParentTop="true"
         android:layout_gravity="center"
         android:layout_marginTop="20dp"
-        android:inputType="number"
+        android:inputType="numberDecimal"
         android:labelFor="@string/fragment_rssi_distance_input" />
 
     <Button

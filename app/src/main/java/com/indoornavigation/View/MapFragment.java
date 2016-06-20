@@ -162,8 +162,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
-        droneController = new DroneController(getContext());
-        droneController.setListener(mDroneControllerListener);
+        //droneController = new DroneController(getContext());
+        //droneController.setListener(mDroneControllerListener);
 
         View view = inflater.inflate(R.layout.fragment_map, container, false);
 
@@ -588,7 +588,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         if (py4a != null) py4a.destroy();
 
-        droneController.destroy();
+
+        if (droneController!= null) droneController.destroy();
         Utils.stopService(WifiScanner.class, getActivity());
     }
 

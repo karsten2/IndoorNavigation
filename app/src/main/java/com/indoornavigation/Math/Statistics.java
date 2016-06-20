@@ -56,47 +56,4 @@ public class Statistics {
         return stats.getPercentile(50);
     }
 
-    public static class SRegression {
-
-        SimpleRegression regression = new SimpleRegression();
-
-        /**
-         * Adding data to Dataset.
-         * @param x value 1
-         * @param y value 2
-         */
-        public void addData(double x, double y) {
-            regression.addData(x, y);
-        }
-
-        /**
-         * Try to run for unkown data.
-         * @param predict prediction value.
-         * @return result.
-         */
-        public double getPrediction(double predict) {
-            return this.regression.predict(predict);
-        }
-
-        /**
-         * The slope.
-         * @return slopey mcslopeslope.
-         */
-        public double getSlope() {
-            return this.regression.getSlope();
-        }
-
-        /**
-         * The Intercept.
-         * @return Intercept.
-         */
-        public double getIntercept() {
-            return this.regression.getIntercept();
-        }
-
-        public SimpleRegression get() {
-            return this.regression;
-        }
-
-    }
 }

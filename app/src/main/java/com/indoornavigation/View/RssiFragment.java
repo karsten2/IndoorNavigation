@@ -26,9 +26,11 @@ import com.google.android.gms.common.api.BooleanResult;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.vision.text.Text;
+import com.google.common.math.DoubleMath;
 import com.indoornavigation.Adapter.WifiAdapter;
 import com.indoornavigation.Helper.Utils;
 import com.indoornavigation.Math.DataSmoothing;
+import com.indoornavigation.Math.SRegression;
 import com.indoornavigation.Math.Statistics;
 import com.indoornavigation.Services.WifiScanner;
 import com.parrot.arsdk.arcontroller.ARControllerCodec;
@@ -48,17 +50,16 @@ public class RssiFragment extends Fragment {
 
     private OnFragmentInteractionListener mListener;
     private boolean write = false;
-    private int distance = -1;
+    private double distance = -1;
     private ArrayList<ArrayList<BaseStation>> allResults = new ArrayList<>();
-    private Button btnStart;
     private WifiAdapter wifiAdapter;
     private ArrayList<ScanResult> scanResults = new ArrayList<>();
     private BaseStation bsFilter;
     private TextView txtFilter;
-    private EditText txtNumber;
-    private Statistics.SRegression sRegression;
-    private final String fileHeader = "DATE;BS;RAW;";
+    private final String fileHeader = "DATE;SSID;DISTANCE;RAW;MEAN;MEDIAN\n";
     private BufferedWriter bw;
+
+    private boolean creatingStatistics = false;
 
     public RssiFragment() {
         // Required empty public constructor
@@ -103,21 +104,46 @@ public class RssiFragment extends Fragment {
 
         @Override
         public void onWifiScanlistChanged(ArrayList<BaseStation> baseStations) {
-            if (write) {
-                createStatistics(baseStations);
+            Log.d("Drone rssi", "wifi detected: " + baseStations.size()
+                    + "\n" + write + " : " + creatingStatistics);
+            if (!test && bsFilter != null && bsFilter.getSsid() != null)
+                test(new ArrayList<BaseStation>(baseStations));
+            if (write && !creatingStatistics) {
+                createStatistics(new ArrayList<BaseStation>(baseStations));
             }
         }
     };
 
+    boolean test = false;
+    private void test(ArrayList<BaseStation> baseStations) {
+        test = true;
+        for (BaseStation bs : baseStations) {
+            if (bs.getSsid() != null && bs.getSsid().equals(bsFilter.getSsid())) {
+                SRegression sRegression = new SRegression();
+                double prediction = sRegression.getPrediction(bs.getDistance());
+                double calcPrecision = calculateDistance(bs.getDistance(), 2457);
+                Log.d("SRegression", "RSSI: " + bs.getDistance()
+                        + "\nPrediction: " + prediction
+                        + "\nCalculated Distance: " + calcPrecision);
+            }
+        }
+        test = false;
+    }
+
+    /**
+     * http://rvmiller.com/2013/05/part-1-wifi-based-trilateration-on-android/
+     * @param levelInDb
+     * @param freqInMHz
+     * @return
+     */
+    private double calculateDistance(double levelInDb, double freqInMHz)    {
+        double exp = (27.55 - (20 * Math.log10(freqInMHz)) + Math.abs(levelInDb)) / 20.0;
+        return Math.pow(10.0, exp);
+    }
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        try {
-            createCsvWriter();
-        } catch (IOException e) {
-            Log.e("csv writing", e.getMessage());
-        }
-
         View view = inflater.inflate(R.layout.fragment_rssi, container, false);
 
         DroneController droneController = new DroneController(getContext());
@@ -135,19 +161,26 @@ public class RssiFragment extends Fragment {
 
         txtFilter = (TextView) view.findViewById(R.id.txtFilter);
 
-        txtNumber = (EditText) view.findViewById(R.id.txtNumber);
+        final EditText txtNumber = (EditText) view.findViewById(R.id.txtNumber);
 
-        btnStart = (Button) view.findViewById(R.id.btnStart);
+        Button btnStart = (Button) view.findViewById(R.id.btnStart);
         if (btnStart != null) {
             btnStart.setOnClickListener(new View.OnClickListener() {
-
                 @Override
                 public void onClick(View v) {
 
+                    if (txtNumber != null)
+                        distance = Double.valueOf(txtNumber.getText().toString());
+
                     Statistics.clear();
-                    sRegression = new Statistics.SRegression();
-                    Statistics.setWindowSize(5);
+                    Statistics.setWindowSize(20);
                     MyTask myTask = new MyTask();
+
+                    try {
+                        bw = getCsvWriter(String.valueOf(distance));
+                    } catch (IOException e) {
+                        Log.e("CSV Error", e.getMessage());
+                    }
                     myTask.execute();
 
                 }
@@ -169,6 +202,13 @@ public class RssiFragment extends Fragment {
                 e.printStackTrace();
             }
             write = false;
+
+            try {
+                if (bw != null) bw.close();
+            } catch (IOException e) {
+                Log.e("CSV closing", e.getMessage());
+            }
+
             Log.d("CSV", "Aufzeichnung beendet");
             return null;
         }
@@ -180,15 +220,23 @@ public class RssiFragment extends Fragment {
         }
     }
 
-    private void createCsvWriter() throws IOException {
+    /**
+     * Function that creates a buffered writer to write to the smartphones download directory.
+     * @param fileTag Addition to the filename (Name is always: AnalysisData->fileTag<-.csv
+     * @return buffered writer.
+     * @throws IOException
+     */
+    private BufferedWriter getCsvWriter(String fileTag) throws IOException {
         String baseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
-        String fileName = "AnalysisData.csv";
+        String fileName = "AnalysisData_" + fileTag + ".csv";
         String filePath = baseDir + "/" + File.separator + fileName;
         File f = new File(filePath);
 
         FileWriter fw = new FileWriter(f, true);
         bw = new BufferedWriter(fw);
         bw.write(fileHeader);
+
+        return bw;
     }
 
     /**
@@ -216,13 +264,6 @@ public class RssiFragment extends Fragment {
                     }
                 });
 
-        /*builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-            @Override
-            public void onDismiss(DialogInterface dialog) {
-                Utils.stopService(WifiScanner.class, getActivity());
-            }
-        });*/
-
         builder.create().show();
     }
 
@@ -234,15 +275,13 @@ public class RssiFragment extends Fragment {
                 wifiAdapter.clear();
                 wifiAdapter.addAll((ArrayList<ScanResult>) intent.getExtras().get("scanResults"));
                 wifiAdapter.notifyDataSetChanged();
-                testCreateStatistics((ArrayList<ScanResult>) intent.getExtras().get("scanResults"));
-                Log.d(TAG, "received data: " + scanResults.size());
             } catch (ClassCastException e) {
                 Log.e(TAG, "wifi receiver onReceive" + e.getMessage());
             }
         }
     };
 
-    private void testCreateStatistics(ArrayList<ScanResult> scanResults) {
+    /*private void testCreateStatistics(ArrayList<ScanResult> scanResults) {
         if (write) {
             ArrayList<BaseStation> baseStations = new ArrayList<>();
 
@@ -254,27 +293,28 @@ public class RssiFragment extends Fragment {
             }
             createStatistics(baseStations);
         }
-    }
+    }*/
 
     private void createStatistics(ArrayList<BaseStation> baseStations) {
         try {
-
+            creatingStatistics = true;
             for (BaseStation bs : baseStations) {
                 if (bsFilter != null && bsFilter.getSsid().equals(bs.getSsid())) {
                     double bsDistance = bs.getDistance();
                     Statistics.add(bs.getDistance());
-                    sRegression.addData(bsDistance, distance);
 
-                    String writer = ";" + Statistics.getMean()
-                            + ";" + Statistics.getMedian();
+                    String writer = distance
+                            + ";" + Statistics.getMean()
+                            + ";" + Statistics.getMedian() + "\n";
 
                     writeData(bs.toString() + writer);
                     Log.d("CSV", bs.toString() + writer);
-
                 }
             }
+            creatingStatistics = false;
         } catch (IOException e) {
             Log.e("csv writing", e.getMessage());
+            creatingStatistics = false;
         }
     }
 

@@ -387,7 +387,7 @@ public class DroneController {
                     DbTables.RadioMap.TABLE_NAME,
                     null,
                     DbTables.RadioMap.COL_SSID + " = ?",
-                    new String[] { bs.getSsid() },
+                    new String[] { (bs.getSsid() != null ? bs.getSsid() : "") },
                     null, null, null
             );
             foundBaseSations.addAll(getCursorData(c));
