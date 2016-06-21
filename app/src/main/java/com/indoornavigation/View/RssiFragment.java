@@ -261,14 +261,6 @@ public class RssiFragment extends Fragment {
         }
     };
 
-    /*
-    "DATE;SSID;DISTANCE;RAW;MEAN_5;MEAN_10;MEAN_20;MEDIAN_5;MEDIAN_10;MEDIAN_20"
-            + ";PREDICTION_RAW;PREDICTION_MEAN_5;PREDICTION_MEAN_10;PREDICTION_MEAN_20"
-            + ";PREDICTION_MEDIAN_5;PREDICTION_MEDIAN_10;PREDICTION_MEDIAN_20"
-            + ";PROX_CALC_RAW;PROX_CALC_MEAN_5;PROX_CALC_MEAN_10;PROX_CALC_MEAN_20"
-            + ";PROX_CALC_MEDIAN_5;PROX_CALC_MEDIAN_10;PROX_CALC_MEDIAN_20";
-
-    */
     private void createStatistics(ArrayList<BaseStation> baseStations) {
         try {
             creatingStatistics = true;
