@@ -16,6 +16,7 @@ public class BaseStation implements Serializable {
     private int channel;
     private LatLng latLng;
     private double distance;
+    private double rssi;
     private String timeStamp;
 
     private static final String TAG = "BaseStation";
@@ -120,6 +121,14 @@ public class BaseStation implements Serializable {
         this.timeStamp = timeStamp;
     }
 
+    public double getRssi() {
+        return rssi;
+    }
+
+    public void setRssi(double rssi) {
+        this.rssi = rssi;
+    }
+
     /**
      * Function to convert the class' values into a key->value set.
      * Required for Sqlite Database insert.
@@ -139,5 +148,20 @@ public class BaseStation implements Serializable {
     @Override
     public String toString() {
         return timeStamp + ";" + ssid;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        try {
+            if (o != null ) {
+                BaseStation toCompare = (BaseStation) o;
+                if (this.ssid.equals(toCompare.getSsid()))
+                    return true;
+            }
+        } catch (Exception e) {
+            return false;
+        }
+
+        return false;
     }
 }

@@ -52,6 +52,9 @@ public final class DbTables {
 
         public static final String SQL_DROP_TABLE =
                 "DROP TABLE IF EXISTS " + RadioMap.TABLE_NAME;
+
+        public static final String SQL_SELECT_ALL =
+                "SELECT * FROM " + RadioMap.TABLE_NAME;
     }
 
     public static abstract class ApRegressionValues implements BaseColumns {
@@ -78,6 +81,9 @@ public final class DbTables {
 
         public static final String SQL_DROP_TABLE =
                 "DROP TABLE IF EXISTS " + ApRegressionValues.TABLE_NAME;
+
+        public static final String SQL_SELECT_ALL =
+                "SELECT * FROM " + ApRegressionValues.TABLE_NAME;
 
     }
 }

@@ -151,8 +151,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
-        //droneController = new DroneController(getContext());
-        //droneController.setListener(mDroneControllerListener);
+        droneController = new DroneController(getContext());
+        droneController.setListener(mDroneControllerListener);
 
         View view = inflater.inflate(R.layout.fragment_map, container, false);
 
@@ -271,7 +271,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         mMap.setOnMarkerDragListener(onMarkerDragListener);
 
         // Prepare marker for drone position.
-        BitmapDescriptor iconDrone = BitmapDescriptorFactory.fromResource(R.drawable.ic_navigation);
+        BitmapDescriptor iconDrone = BitmapDescriptorFactory.fromResource(R.drawable.ic_play_arrow_red_a700_24dp);
         mMarkerDronePosition = mMap.addMarker(new MarkerOptions().icon(iconDrone)
                 .visible(false).position(new LatLng(0, 0)));
 

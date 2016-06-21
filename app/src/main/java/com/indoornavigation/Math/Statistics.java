@@ -13,9 +13,15 @@ import java.util.List;
 public class Statistics {
 
     private DescriptiveStatistics stats = new DescriptiveStatistics();
+    private String name = "";
 
     public Statistics(int windowSize) {
         stats.setWindowSize(windowSize);
+    }
+
+    public Statistics(int windowSize, String name) {
+        stats.setWindowSize(windowSize);
+        this.name = name;
     }
 
     public void add(Double value) {
@@ -33,6 +39,14 @@ public class Statistics {
         for (double d : values) {
             stats.addValue(d);
         }
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public void clear() {

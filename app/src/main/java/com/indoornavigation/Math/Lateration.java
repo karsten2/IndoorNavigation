@@ -29,39 +29,34 @@ public abstract class Lateration {
 
         LatLng ret = new LatLng(0, 0);
 
-        // At least 3 base stations are required.
-        /*if /*(baseStations.size() < 3)
-            //throw new IllegalArgumentException("At least 3 base stations are required.");
-        else */{
-         if (true)   try {
-                /**
-                 * Formula for least squares method:
-                 *      |xe|
-                 * Pe = |ye| = (A^T * A)^(-1) * A^T * b
-                 */
-                double[][] A = generateMatrixA(baseStations);
-                double[][] _A = transformA(A);
-                double[][] b = generateMatrixB(baseStations);
+        if (baseStations.size() >= 3) try {
+            /**
+             * Formula for least squares method:
+             *      |xe|
+             * Pe = |ye| = (A^T * A)^(-1) * A^T * b
+             */
+            double[][] A = generateMatrixA(baseStations);
+            double[][] _A = transformA(A);
+            double[][] b = generateMatrixB(baseStations);
 
-                // Multiply A^T with A to get a square matrix.
-                double[][] aMult = multiplyByMatrix(_A, A);
+            // Multiply A^T with A to get a square matrix.
+            double[][] aMult = multiplyByMatrix(_A, A);
 
-                // Invert the square Matrix with Apache Commons math Package.
-                // http://commons.apache.org/proper/commons-math/
-                RealMatrix inv = new Array2DRowRealMatrix(aMult);
-                DecompositionSolver solver = new LUDecomposition(inv).getSolver();
-                double[][] aInv = solver.getInverse().getData();
+            // Invert the square Matrix with Apache Commons math Package.
+            // http://commons.apache.org/proper/commons-math/
+            RealMatrix inv = new Array2DRowRealMatrix(aMult);
+            DecompositionSolver solver = new LUDecomposition(inv).getSolver();
+            double[][] aInv = solver.getInverse().getData();
 
-                double[][] aPseudoInv = multiplyByMatrix(aInv, _A);
+            double[][] aPseudoInv = multiplyByMatrix(aInv, _A);
 
-                // Multiply pseudo inverse of A with b
-                double[][] resMatrix = multiplyByMatrix(aPseudoInv, b);
+            // Multiply pseudo inverse of A with b
+            double[][] resMatrix = multiplyByMatrix(aPseudoInv, b);
 
-                ret = new LatLng(resMatrix[0][0], resMatrix[0][1]);
+            ret = new LatLng(resMatrix[0][0], resMatrix[1][0]);
 
-            } catch (IllegalArgumentException e) {
-                //Log.e(TAG, e.getMessage());
-            }
+        } catch (IllegalArgumentException e) {
+            //Log.e(TAG, e.getMessage());
         }
 
         return ret;
@@ -69,9 +64,9 @@ public abstract class Lateration {
 
     /**
      * Create Matrix A (2 columns, n rows).
-     *          |x1 - x2    y1 - y2|
-     *      A = |x1 - x3    y1 - y3|
-     *          |x1 - x4    y1 - y4|
+     * |x1 - x2    y1 - y2|
+     * A = |x1 - x3    y1 - y3|
+     * |x1 - x4    y1 - y4|
      * extensible to n stations.
      *
      * @param baseStations that contains distance and coordinate.
@@ -81,7 +76,7 @@ public abstract class Lateration {
 
         double[][] ret = new double[baseStations.size() - 1][2];
 
-        for (int i = 0; i < baseStations.size() - 1; i ++) {
+        for (int i = 0; i < baseStations.size() - 1; i++) {
             ret[i][0] = baseStations.get(0).getLatLng().latitude
                     - baseStations.get(i + 1).getLatLng().latitude;
 
@@ -94,10 +89,10 @@ public abstract class Lateration {
 
     /**
      * Function to transform a matrix.
-     *
-     *          | 2 -2|
-     *      A = |-2  2| => A' = | 2 -2  5|
-     *          | 5  3|         |-2  2  3|
+     * <p/>
+     * | 2 -2|
+     * A = |-2  2| => A' = | 2 -2  5|
+     * | 5  3|         |-2  2  3|
      *
      * @param A matrix to transform.
      * @return transformed matrix.
@@ -106,9 +101,9 @@ public abstract class Lateration {
         double[][] ret = new double[A[0].length][A.length];
 
         // for each column in A
-        for (int col = 0; col < A[0].length; col ++) {
+        for (int col = 0; col < A[0].length; col++) {
             // for each row in a column in A
-            for (int row = 0; row < A.length; row ++) {
+            for (int row = 0; row < A.length; row++) {
                 ret[col][row] = A[row][col];
             }
         }
@@ -118,16 +113,17 @@ public abstract class Lateration {
 
     /**
      * Create Matrix b (1 column, n rows).
-     *           |x1^2 - x2^2 + y1^2 - y2^2 + D2^2 - D1|
+     * |x1^2 - x2^2 + y1^2 - y2^2 + D2^2 - D1|
      * b = 1/2 * |x1^2 - x3^2 + y1^2 - y3^2 + D3^2 - D1|
-     *           |x1^2 - x4^2 + y1^2 - y4^2 + D4^2 - D1|
+     * |x1^2 - x4^2 + y1^2 - y4^2 + D4^2 - D1|
+     *
      * @param baseStations that contains distance and coordinate.
      * @return transformed matrix.
      */
     private static double[][] generateMatrixB(ArrayList<BaseStation> baseStations) {
         double[][] ret = new double[baseStations.size() - 1][1];
 
-        for (int i = 0; i < baseStations.size() - 1; i ++) {
+        for (int i = 0; i < baseStations.size() - 1; i++) {
             final double x1 = baseStations.get(0).getLatLng().latitude;
             final double y1 = baseStations.get(0).getLatLng().longitude;
             final double D1 = baseStations.get(0).getDistance();
@@ -146,6 +142,7 @@ public abstract class Lateration {
 
     /**
      * Function to multiply two matrices.
+     *
      * @param m1 First matrix.
      * @param m2 Second matrix.
      * @return Multiplied matrix.
@@ -153,15 +150,15 @@ public abstract class Lateration {
     private static double[][] multiplyByMatrix(double[][] m1, double[][] m2) {
         int m1ColLength = m1[0].length;
         int m2RowLength = m2.length;
-        if(m1ColLength != m2RowLength)
+        if (m1ColLength != m2RowLength)
             throw new IllegalArgumentException("Matrix 1 column length != Matrix 2 row length.");
         int mRRowLength = m1.length;
         int mRColLength = m2[0].length;
         double[][] mResult = new double[mRRowLength][mRColLength];
 
-        for(int i = 0; i < mRRowLength; i++) {         // rows from m1
-            for(int j = 0; j < mRColLength; j++) {     // columns from m2
-                for(int k = 0; k < m1ColLength; k++) { // columns from m1
+        for (int i = 0; i < mRRowLength; i++) {         // rows from m1
+            for (int j = 0; j < mRColLength; j++) {     // columns from m2
+                for (int k = 0; k < m1ColLength; k++) { // columns from m1
                     mResult[i][j] += m1[i][k] * m2[k][j];
                 }
             }
@@ -171,6 +168,7 @@ public abstract class Lateration {
 
     /**
      * Function to display a matrix in a string.
+     *
      * @param m Matrix to display.
      * @return String with Matrix.
      */

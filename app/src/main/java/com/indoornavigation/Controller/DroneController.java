@@ -10,6 +10,9 @@ import android.widget.Toast;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.maps.android.SphericalUtil;
+import com.indoornavigation.Helper.Utils;
+import com.indoornavigation.Math.SRegression;
+import com.indoornavigation.Math.Statistics;
 import com.parrot.arsdk.ARSDK;
 import com.parrot.arsdk.arcommands.ARCOMMANDS_ARDRONE3_MEDIARECORDEVENT_PICTUREEVENTCHANGED_ERROR_ENUM;
 import com.parrot.arsdk.arcommands.ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_ENUM;
@@ -48,6 +51,12 @@ public class DroneController {
     private ArrayList<Marker> route = new ArrayList<>();
     private ArrayList<Marker> routeDone = new ArrayList<>();
 
+    private ArrayList<BaseStation> dbBaseStations = new ArrayList<>();
+    private ArrayList<Statistics> apStatistics = new ArrayList<>();
+    private Statistics droneStatistics;
+
+    private EstimatePosition estimatePositionTask;
+
     private List<Listener> mListener;
 
     // Load native libraries, mandatory!
@@ -79,6 +88,7 @@ public class DroneController {
 
     /**
      * Event that fires when a marker is added to array routeDone.
+     *
      * @param marker the last added Marker in array routeDone.
      */
     private void notifyCheckPointReached(Marker marker) {
@@ -89,6 +99,7 @@ public class DroneController {
 
     /**
      * Event that fires when the drone sends a video.
+     *
      * @param codec that contains the video from the drone.
      */
     private void notifyVideoReceived(ARControllerCodec codec) {
@@ -99,6 +110,7 @@ public class DroneController {
 
     /**
      * Event fires when the dronecontroller connects to a drone.
+     *
      * @param connected true if drone is connected, otherwise false.
      */
     private void notifyDroneConnected(boolean connected) {
@@ -109,6 +121,7 @@ public class DroneController {
 
     /**
      * Event fires when the computed position of the drone changed.
+     *
      * @param latLng the app computed.
      */
     private void notifyPositionChanged(LatLng latLng, float bearing) {
@@ -119,6 +132,7 @@ public class DroneController {
 
     /**
      * Event fires when the list of scanned wifi networks changed.
+     *
      * @param baseStations the drone scanned.
      */
     private void notifyWifiScanlistChanged(ArrayList<BaseStation> baseStations) {
@@ -132,6 +146,7 @@ public class DroneController {
         this.context = context;
 
         db = new SQLiteDBHelper(context);
+        this.dbBaseStations = getCursorData(db.rawQuery(DbTables.RadioMap.SQL_SELECT_ALL));
 
         droneDiscoverer = new DroneDiscoverer(context);
         droneDiscoverer.setup();
@@ -223,31 +238,40 @@ public class DroneController {
 
         @Override
         public void onPictureTaken(
-                ARCOMMANDS_ARDRONE3_MEDIARECORDEVENT_PICTUREEVENTCHANGED_ERROR_ENUM error) { }
-
-        @Override
-        public void configureDecoder(ARControllerCodec codec) {
-            notifyVideoReceived(codec);
+                ARCOMMANDS_ARDRONE3_MEDIARECORDEVENT_PICTUREEVENTCHANGED_ERROR_ENUM error) {
         }
 
         @Override
-        public void onFrameReceived(ARFrame frame) { }
+        public void configureDecoder(ARControllerCodec codec) {
+            //notifyVideoReceived(codec);
+        }
 
         @Override
-        public void onMatchingMediasFound(int nbMedias) { }
+        public void onFrameReceived(ARFrame frame) {
+        }
 
         @Override
-        public void onDownloadProgressed(String mediaName, int progress) { }
+        public void onMatchingMediasFound(int nbMedias) {
+        }
 
         @Override
-        public void onDownloadComplete(String mediaName) { }
+        public void onDownloadProgressed(String mediaName, int progress) {
+        }
+
+        @Override
+        public void onDownloadComplete(String mediaName) {
+        }
 
         @Override
         public void onWifiScanListChanged(ArrayList<BaseStation> baseStations) {
             notifyWifiScanlistChanged(baseStations);
             //Log.d(TAG, "wifi found: " + baseStations.size());
-            getPositionFromWifi(new ArrayList<BaseStation>(baseStations));
-            //Log.d(TAG, String.valueOf(baseStations.size()));
+
+            if (estimatePositionTask == null ||
+                    estimatePositionTask.getStatus() == AsyncTask.Status.FINISHED) {
+                estimatePositionTask = new EstimatePosition();
+                estimatePositionTask.execute(baseStations);
+            }
         }
 
         @Override
@@ -272,9 +296,9 @@ public class DroneController {
      * Function to move the connected drone.
      * pitch Forward/ backward angle of the drone. Value in percentage from -100 to 100.
      * flag 1 if the pitch and roll values should be used, 0 otherwise.
-     *
+     * <p/>
      * The drone is moved forward, until the coordinates of the drone matches the destination.
-     *
+     * <p/>
      * This function should be started async.
      *
      * @param destination the drone should fly.
@@ -295,6 +319,7 @@ public class DroneController {
 
     /**
      * Function to move the drone.
+     *
      * @param speed as byte value +- 100. positive = forward, negative = backward.
      * @param flag
      */
@@ -307,6 +332,7 @@ public class DroneController {
 
     /**
      * Function to turn the drone around the z-axis.
+     *
      * @param speed as byte value +- 100 positive = right; negative = left turn.
      */
     private void droneYaw(double speed) {
@@ -324,7 +350,7 @@ public class DroneController {
                 ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_ENUM
                         .ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_LANDED) {
             mBebopDrone.takeOff();
-            mBebopDrone.calibrateMagnetometer((byte)1);
+            mBebopDrone.calibrateMagnetometer((byte) 1);
         }
     }
 
@@ -346,13 +372,14 @@ public class DroneController {
 
     /**
      * Function to get data from database cursor.
+     *
      * @param cursor from Database.
      * @return List with all BaseStations from Database.
      */
     public ArrayList<BaseStation> getCursorData(Cursor cursor) {
         ArrayList<BaseStation> ret = new ArrayList<>();
 
-        if (cursor != null && cursor.isClosed()) {
+        if (cursor != null && !cursor.isClosed()) {
             if (cursor.moveToFirst()) {
                 do {
                     try {
@@ -366,7 +393,7 @@ public class DroneController {
                     } catch (Exception e) {
                         Log.e(TAG, e.getMessage());
                     }
-                } while (cursor.moveToFirst());
+                } while (cursor.moveToNext());
 
                 cursor.close();
             }
@@ -374,11 +401,7 @@ public class DroneController {
         return ret;
     }
 
-    /**
-     * Function to estimate the drones position with scanned wifi points.
-     * @param baseStations scanned from the drone.
-     */
-    private void getPositionFromWifi(ArrayList<BaseStation> baseStations) {
+    private ArrayList<BaseStation> getBsFromDb(ArrayList<BaseStation> baseStations) {
         ArrayList<BaseStation> foundBaseSations = new ArrayList<>();
 
         // find base stations in database.
@@ -387,10 +410,51 @@ public class DroneController {
                     DbTables.RadioMap.TABLE_NAME,
                     null,
                     DbTables.RadioMap.COL_SSID + " = ?",
-                    new String[] { (bs.getSsid() != null ? bs.getSsid() : "") },
+                    new String[]{(bs.getSsid() != null ? bs.getSsid() : "")},
                     null, null, null
             );
+
+            Cursor c2 = db.rawQuery("select * from radiomap where ssid = '" + bs.getSsid() + "'");
             foundBaseSations.addAll(getCursorData(c));
+        }
+
+        return foundBaseSations;
+    }
+
+    /**
+     * Function to estimate the drones position with scanned wifi points.
+     *
+     * @param baseStations scanned from the drone.
+     */
+    private void getPositionFromWifi(ArrayList<BaseStation> baseStations) {
+        // SRegression sRegression = new SRegression(true);
+        double freqInMhz = 2457;
+        ArrayList<BaseStation> foundBaseSations = new ArrayList<>();
+
+        // smooth rssi data for every baseStation
+        for (BaseStation bs : baseStations) {
+            boolean found = false;
+
+            if (dbBaseStations.contains(bs)) {
+                BaseStation temp = dbBaseStations.get(dbBaseStations.indexOf(bs));
+
+                for (Statistics stat : apStatistics) {
+                    if (stat.getName().equals(bs.getSsid())) {
+                        found = true;
+                        stat.add(bs.getRssi());
+                        bs.setRssi(stat.getMean());
+                        bs.setDistance(Utils.calculateDistance(bs.getRssi(), freqInMhz));
+                        foundBaseSations.add(temp);
+                        break;
+                    }
+                }
+
+                if (!found) {
+                    Statistics statistics = new Statistics(10, bs.getSsid());
+                    statistics.add(bs.getRssi());
+                    apStatistics.add(statistics);
+                }
+            }
         }
 
         // laterate Position.
@@ -409,6 +473,7 @@ public class DroneController {
 
     /**
      * Function converts radians to degrees.
+     *
      * @param value in radiant.
      * @return value in degrees.
      */
@@ -418,6 +483,7 @@ public class DroneController {
 
     /**
      * Function to start an autonomous flight with the drone.
+     *
      * @param route the drone has to fly.
      */
     public void startAutopilot(ArrayList<Marker> route) {
@@ -440,33 +506,33 @@ public class DroneController {
      * Function is executed when autonomousFlight is true, and the drone entered hovering mode.
      */
     private void startAutopilot() {
-            //yawTask.execute(0);
+        //yawTask.execute(0);
         new YawTaskTest().execute(90);
 
     }
 
     /**
      * Function to turn the drone around the z-Axis for a specific angle.
-     *
+     * <p/>
      * lat/lng: (0.0,1.0) atan2:     90.0
      * lat/lng: (1.0,0.0) atan2:     0.0
      * lat/lng: (-1.0,0.0)atan2:    -180.0
      * lat/lng: (0.0,-1.0)atan2:    -90.0
-     *
-     *               90
-     *               |
-     *               |
-     *  +-180 _______|_______ 0
-     *               |
-     *               |
-     *               |
-     *              -90
-     *
+     * <p/>
+     * 90
+     * |
+     * |
+     * +-180 _______|_______ 0
+     * |
+     * |
+     * |
+     * -90
+     * <p/>
      * Use modulo to get the correct degrees.
-     *      degrees = degrees % 360.
-     *          0 to 180    will return the same numbers you put in.
-     *          -180 to -1  return values between 180 to 359 degrees.
-     *
+     * degrees = degrees % 360.
+     * 0 to 180    will return the same numbers you put in.
+     * -180 to -1  return values between 180 to 359 degrees.
+     * <p/>
      * The function will find out the shortest way to turn the drone (left or right) to reach
      * the wanted bearing.
      *
@@ -489,8 +555,9 @@ public class DroneController {
 
                 droneYaw(40 * (result < 0 ? -1 : 1));
 
-                while(!(currentAttitudeYaw >= bearing - tolerance
-                        && currentAttitudeYaw <= bearing + tolerance)) { }
+                while (!(currentAttitudeYaw >= bearing - tolerance
+                        && currentAttitudeYaw <= bearing + tolerance)) {
+                }
 
                 Log.d(TAG, "Drone yawed for: " + result);
 
@@ -532,7 +599,7 @@ public class DroneController {
 
             route.remove(marker);
 
-            if (route.size() >  0)
+            if (route.size() > 0)
                 yawTask.execute();
             else
                 droneLand();
@@ -556,9 +623,11 @@ public class DroneController {
     protected void finalize() throws Throwable {
         super.finalize();
 
-        droneDiscoverer.stopDiscovering();
-        droneDiscoverer.cleanup();
-        droneDiscoverer.removeListener(mDiscovererListener);
+        if (droneDiscoverer != null) {
+            droneDiscoverer.stopDiscovering();
+            droneDiscoverer.cleanup();
+            droneDiscoverer.removeListener(mDiscovererListener);
+        }
 
         db.close();
     }
@@ -582,6 +651,7 @@ public class DroneController {
 
     /**
      * Function to get the modulo, without getting negative values.
+     *
      * @param dividend
      * @param divisor
      * @return modulo.
@@ -610,8 +680,9 @@ public class DroneController {
                 // start turning
                 droneYaw(40 * (result < 0 ? -1 : 1));
 
-                while(!(currentAttitudeYaw >= bearing - tolerance
-                        && currentAttitudeYaw <= bearing + tolerance)) { }
+                while (!(currentAttitudeYaw >= bearing - tolerance
+                        && currentAttitudeYaw <= bearing + tolerance)) {
+                }
 
                 Log.d(TAG, "Drone yawed for: " + result);
 
@@ -654,6 +725,23 @@ public class DroneController {
             super.onPostExecute(o);
 
             new YawTaskTest().execute(o);
+        }
+    }
+
+    private class EstimatePosition extends AsyncTask {
+        @Override
+        protected Object doInBackground(Object[] params) {
+            if (params != null && params[0] != null) {
+                try {
+                    ArrayList<BaseStation> scanresults = new ArrayList<>( (ArrayList<BaseStation>) params[0]);
+                    if (scanresults != null) {
+                        getPositionFromWifi(scanresults);
+                    }
+                } catch (Exception e) {
+                    Log.e("estimate position", e.getMessage());
+                }
+            }
+            return null;
         }
     }
 }

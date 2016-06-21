@@ -176,7 +176,7 @@ public class RssiFragment extends Fragment {
 
             write = true;
             try {
-                TimeUnit.SECONDS.sleep(60);
+                TimeUnit.SECONDS.sleep(300);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -265,15 +265,15 @@ public class RssiFragment extends Fragment {
         try {
             creatingStatistics = true;
             for (BaseStation bs : baseStations) {
-                if (bsFilter != null && bsFilter.getSsid().equals(bs.getSsid())) {
-                    double rssiRaw = bs.getDistance();
+                if (bsFilter != null && bsFilter.getSsid() != null && bsFilter.getSsid().equals(bs.getSsid())) {
+                    double rssiRaw = bs.getRssi();
                     double freqMhz = 2457;
 
                     SRegression sRegression = new SRegression(true);
 
-                    statistics_5.add(bs.getDistance());
-                    statistics_10.add(bs.getDistance());
-                    statistics_20.add(bs.getDistance());
+                    statistics_5.add(bs.getRssi());
+                    statistics_10.add(bs.getRssi());
+                    statistics_20.add(bs.getRssi());
 
                     double mean_5 = statistics_5.getMean();
                     double mean_10 = statistics_10.getMean();
