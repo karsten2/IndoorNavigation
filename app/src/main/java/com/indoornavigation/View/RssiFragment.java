@@ -114,6 +114,9 @@ public class RssiFragment extends Fragment {
      * @return Distance in meters.
      */
     private double calculateDistance(double levelInDb, double freqInMHz) {
+        if (levelInDb == 0)
+            return -1;
+
         double exp = (27.55 - (20 * Math.log10(freqInMHz)) + Math.abs(levelInDb)) / 20.0;
         return Math.pow(10.0, exp);
     }
@@ -310,7 +313,7 @@ public class RssiFragment extends Fragment {
                             + ";" + proxCalcMean_25 + ";" + proxCalcMean_50 + ";" + proxCalcMean_75
                             + ";" + proxCalcMedian_25 + ";" + proxCalcMedian_50 + ";" + proxCalcMedian_75;
 
-                    writeData(bs.toString() + writer + "\n");
+                    writeData(";" + bs.toString() + writer + "\n");
                 }
             }
             creatingStatistics = false;

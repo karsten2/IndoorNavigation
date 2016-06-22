@@ -460,8 +460,11 @@ public class DroneController {
         // laterate Position.
         try {
             //Log.d(TAG, "basestations in database found: " + foundBaseSations.size());
-            currentPosition = Lateration.calculatePosition(foundBaseSations);
-            notifyPositionChanged(currentPosition, currentAttitudeYaw);
+            LatLng newPosition = Lateration.calculatePosition(foundBaseSations);
+            if (newPosition.latitude != 0.0 && newPosition.longitude != 0.0) {
+                currentPosition = newPosition;
+                notifyPositionChanged(currentPosition, currentAttitudeYaw);
+            }
             Log.d("drone",
                     "\nwifi found: " + baseStations.size()
                             + "\nwifi in db found: " + foundBaseSations.size()
@@ -733,7 +736,7 @@ public class DroneController {
         protected Object doInBackground(Object[] params) {
             if (params != null && params[0] != null) {
                 try {
-                    ArrayList<BaseStation> scanresults = new ArrayList<>( (ArrayList<BaseStation>) params[0]);
+                    ArrayList<BaseStation> scanresults = new ArrayList<>((ArrayList<BaseStation>) params[0]);
                     if (scanresults != null) {
                         getPositionFromWifi(scanresults);
                     }

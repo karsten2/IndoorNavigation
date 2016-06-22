@@ -605,7 +605,7 @@ public class BebopDrone {
                             public void run() {
                                 BaseStation mBaseStation = new BaseStation();
                                 mBaseStation.setSsid(ssid);
-                                mBaseStation.setDistance(rssi);
+                                mBaseStation.setRssi(rssi);
                                 mBaseStation.setChannel(channel);
                                 mBaseStation.setTimeStamp(Utils.getDate(System.currentTimeMillis(), "dd.MM.yyyy hh:mm:ss.SSS"));
                                 mBaseStations.add(mBaseStation);
