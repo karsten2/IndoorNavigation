@@ -44,7 +44,7 @@ public class DroneController {
     private static final String TAG = "DroneController";
 
     private LatLng currentPositionGPS;
-    private LatLng currentPosition;
+    private LatLng currentPosition = new LatLng(-1, -1);
     private float currentAttitudeYaw;
 
     private boolean autonomousFlight = false;
@@ -450,7 +450,7 @@ public class DroneController {
                 }
 
                 if (!found) {
-                    Statistics statistics = new Statistics(10, bs.getSsid());
+                    Statistics statistics = new Statistics(80, bs.getSsid());
                     statistics.add(bs.getRssi());
                     apStatistics.add(statistics);
                 }
@@ -461,7 +461,7 @@ public class DroneController {
         try {
             //Log.d(TAG, "basestations in database found: " + foundBaseSations.size());
             LatLng newPosition = Lateration.calculatePosition(foundBaseSations);
-            if (newPosition.latitude != 0.0 && newPosition.longitude != 0.0) {
+            if (!newPosition.equals(new LatLng(0, 0)) && !newPosition.equals(currentPosition)) {
                 currentPosition = newPosition;
                 notifyPositionChanged(currentPosition, currentAttitudeYaw);
             }

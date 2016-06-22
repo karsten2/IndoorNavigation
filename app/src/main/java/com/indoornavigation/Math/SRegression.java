@@ -13,14 +13,13 @@ public class SRegression {
      * @param useDefaultData 2d double array.
      */
     public SRegression(boolean useDefaultData) {
-        regression.addData(-25, 0.1);
-        regression.addData(-31, 0.5);
-        regression.addData(-37, 1  );
-        regression.addData(-42, 1.5);
-        regression.addData(-45, 2  );
-        regression.addData(-48, 3  );
-        regression.addData(-50, 4  );
-        regression.addData(-53, 5  );
+
+        regression.addData(-39.5, 0.5);
+        regression.addData(-43.8, 1);
+        regression.addData(-49.4, 2);
+        regression.addData(-52, 3);
+        regression.addData(-55, 4);
+        regression.addData(-57, 5);
     }
 
     /**

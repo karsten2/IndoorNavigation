@@ -52,16 +52,19 @@ public class RssiFragment extends Fragment {
     private ArrayList<ScanResult> scanResults = new ArrayList<>();
     private BaseStation bsFilter;
     private TextView txtFilter;
-    private final String fileHeader =
-            "DATE;SSID;DISTANCE;RAW;MEAN_25;MEAN_50;MEAN_75;MEDIAN_25;MEDIAN_50;MEDIAN_75"
-                    + ";PREDICTION_RAW;PREDICTION_MEAN_25;PREDICTION_MEAN_50;PREDICTION_MEAN_75"
-                    + ";PREDICTION_MEDIAN_25;PREDICTION_MEDIAN_50;PREDICTION_MEDIAN_75"
-                    + ";PROX_CALC_RAW;PROX_CALC_MEAN_25;PROX_CALC_MEAN_50;PROX_CALC_MEAN_75"
-                    + ";PROX_CALC_MEDIAN_25;PROX_CALC_MEDIAN_50;PROX_CALC_MEDIAN_75\n";
+    private int window1 = 65;
+    private int window2 = 80;
+    private int window3 = 100;
+    private final String fileHeader = String.format(
+            "DATE;SSID;DISTANCE;RAW;MEAN_%1$s;MEAN_%2$s;MEAN_%3$s;MEDIAN_%1$s;MEDIAN_%2$s;MEDIAN_%3$s"
+                    + ";PREDICTION_RAW;PREDICTION_MEAN_%1$s;PREDICTION_MEAN_%2$s;PREDICTION_MEAN_%3$s"
+                    + ";PREDICTION_MEDIAN_%1$s;PREDICTION_MEDIAN_%2$s;PREDICTION_MEDIAN_%3$s"
+                    + ";PROX_CALC_RAW;PROX_CALC_MEAN_%1$s;PROX_CALC_MEAN_%2$s;PROX_CALC_MEAN_%3$s"
+                    + ";PROX_CALC_MEDIAN_%1$s;PROX_CALC_MEDIAN_%2$s;PROX_CALC_MEDIAN_%3$s\n", window1, window2, window3);
     private BufferedWriter bw;
     private SQLiteDBHelper dbHelper;
 
-    Statistics statistics_25, statistics_50, statistics_75;
+    Statistics statistics_1, statistics_2, statistics_3;
 
     private boolean creatingStatistics = false;
 
@@ -108,7 +111,7 @@ public class RssiFragment extends Fragment {
     /**
      * Function to calculate the distance in meters from dbm rssi values.
      * http://rvmiller.com/2013/05/part-1-wifi-based-trilateration-on-android/
-     *
+     * https://en.wikipedia.org/wiki/Free-space_path_loss
      * @param levelInDb RSSI value.
      * @param freqInMHz Frequency of the sending device.
      * @return Distance in meters.
@@ -152,9 +155,9 @@ public class RssiFragment extends Fragment {
                     if (txtNumber != null)
                         distance = Double.valueOf(txtNumber.getText().toString());
 
-                    statistics_25 = new Statistics(25);
-                    statistics_50 = new Statistics(50);
-                    statistics_75 = new Statistics(75);
+                    statistics_1 = new Statistics(window1);
+                    statistics_2 = new Statistics(window2);
+                    statistics_3 = new Statistics(window3);
 
                     MyTask myTask = new MyTask();
 
@@ -270,48 +273,48 @@ public class RssiFragment extends Fragment {
             for (BaseStation bs : baseStations) {
                 if (bsFilter != null && bsFilter.getSsid() != null && bsFilter.getSsid().equals(bs.getSsid())) {
                     double rssiRaw = bs.getRssi();
-                    double freqMhz = 2457;
+                    double freqMhz = 2412;
 
                     SRegression sRegression = new SRegression(true);
 
-                    statistics_25.add(bs.getRssi());
-                    statistics_50.add(bs.getRssi());
-                    statistics_75.add(bs.getRssi());
+                    statistics_1.add(bs.getRssi());
+                    statistics_2.add(bs.getRssi());
+                    statistics_3.add(bs.getRssi());
 
-                    double mean_25 = statistics_25.getMean();
-                    double mean_50 = statistics_50.getMean();
-                    double mean_75 = statistics_75.getMean();
+                    double mean_1 = statistics_1.getMean();
+                    double mean_2 = statistics_2.getMean();
+                    double mean_3 = statistics_3.getMean();
 
-                    double median_25 = statistics_25.getMedian();
-                    double median_50 = statistics_50.getMedian();
-                    double median_75 = statistics_75.getMedian();
+                    double median_1 = statistics_1.getMedian();
+                    double median_2 = statistics_2.getMedian();
+                    double median_3 = statistics_3.getMedian();
 
                     double predictionRaw = sRegression.getPrediction(rssiRaw);
-                    double predictionMean_25 = sRegression.getPrediction(mean_25);
-                    double predictionMean_50 = sRegression.getPrediction(mean_50);
-                    double predictionMean_75 = sRegression.getPrediction(mean_75);
-                    double predictionMedian_25 = sRegression.getPrediction(median_25);
-                    double predictionMedian_50 = sRegression.getPrediction(median_50);
-                    double predictionMedian_75 = sRegression.getPrediction(median_75);
+                    double predictionMean_1 = sRegression.getPrediction(mean_1);
+                    double predictionMean_2 = sRegression.getPrediction(mean_2);
+                    double predictionMean_3 = sRegression.getPrediction(mean_3);
+                    double predictionMedian_1 = sRegression.getPrediction(median_1);
+                    double predictionMedian_2 = sRegression.getPrediction(median_2);
+                    double predictionMedian_3 = sRegression.getPrediction(median_3);
 
                     double proxCalcRaw = calculateDistance(rssiRaw, freqMhz);
-                    double proxCalcMean_25 = calculateDistance(mean_25, freqMhz);
-                    double proxCalcMean_50 = calculateDistance(mean_50, freqMhz);
-                    double proxCalcMean_75 = calculateDistance(mean_75, freqMhz);
-                    double proxCalcMedian_25 = calculateDistance(median_25, freqMhz);
-                    double proxCalcMedian_50 = calculateDistance(median_50, freqMhz);
-                    double proxCalcMedian_75 = calculateDistance(median_75, freqMhz);
+                    double proxCalcMean_1 = calculateDistance(mean_1, freqMhz);
+                    double proxCalcMean_2 = calculateDistance(mean_2, freqMhz);
+                    double proxCalcMean_3 = calculateDistance(mean_3, freqMhz);
+                    double proxCalcMedian_1 = calculateDistance(median_1, freqMhz);
+                    double proxCalcMedian_2 = calculateDistance(median_2, freqMhz);
+                    double proxCalcMedian_3 = calculateDistance(median_3, freqMhz);
 
 
                     String writer = distance + ";" + rssiRaw
-                            + ";" + mean_25 + ";" + mean_50 + ";" + mean_75
-                            + ";" + median_25 + ";" + median_50 + ";" + median_75
+                            + ";" + mean_1 + ";" + mean_2 + ";" + mean_3
+                            + ";" + median_1 + ";" + median_2 + ";" + median_3
                             + ";" + predictionRaw
-                            + ";" + predictionMean_25 + ";" + predictionMean_50 + ";" + predictionMean_75
-                            + ";" + predictionMedian_25 + ";" + predictionMedian_50 + ";" + predictionMedian_75
+                            + ";" + predictionMean_1 + ";" + predictionMean_2 + ";" + predictionMean_3
+                            + ";" + predictionMedian_1 + ";" + predictionMedian_2 + ";" + predictionMedian_3
                             + ";" + proxCalcRaw
-                            + ";" + proxCalcMean_25 + ";" + proxCalcMean_50 + ";" + proxCalcMean_75
-                            + ";" + proxCalcMedian_25 + ";" + proxCalcMedian_50 + ";" + proxCalcMedian_75;
+                            + ";" + proxCalcMean_1 + ";" + proxCalcMean_2 + ";" + proxCalcMean_3
+                            + ";" + proxCalcMedian_1 + ";" + proxCalcMedian_2 + ";" + proxCalcMedian_3;
 
                     writeData(";" + bs.toString() + writer + "\n");
                 }

@@ -119,13 +119,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         @Override
         public void positionChangedListener(LatLng latLng, float bearing) {
-            if (mMarkerDronePosition != null) {
-
-                mMarkerDronePosition = mMap.addMarker(mMarkerOptDronePosition
-                        .visible(true)
-                        .position(latLng)
-                        .rotation(bearing));
-            }
+            Log.d(TAG, "Position changed: " + latLng.toString());
+            // Prepare marker for drone position.
+            BitmapDescriptor iconDrone = BitmapDescriptorFactory.fromResource(
+                    R.drawable.ic_play_arrow_red_a700_24dp);
+            mMap.addMarker(new MarkerOptions()
+                    .icon(iconStart)
+                    .position(latLng));
         }
 
         @Override
@@ -154,8 +154,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
-        //droneController = new DroneController(getContext());
-        //droneController.setListener(mDroneControllerListener);
+        droneController = new DroneController(getContext());
+        droneController.setListener(mDroneControllerListener);
 
         View view = inflater.inflate(R.layout.fragment_map, container, false);
 
@@ -273,10 +273,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         mMap.setOnMapClickListener(onMapClickListener);
         mMap.setOnMarkerDragListener(onMarkerDragListener);
 
-        // Prepare marker for drone position.
-        BitmapDescriptor iconDrone = BitmapDescriptorFactory.fromResource(R.drawable.ic_play_arrow_red_a700_24dp);
-        mMarkerOptDronePosition = new MarkerOptions().icon(iconDrone);
-
         // drawing the access points stored in the database.
         drawAccessPoints();
 
@@ -348,7 +344,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
      */
     GoogleMap.OnMarkerDragListener onMarkerDragListener = new GoogleMap.OnMarkerDragListener() {
         @Override
-        public void onMarkerDragStart(Marker marker) { }
+        public void onMarkerDragStart(Marker marker) {
+        }
 
         @Override
         public void onMarkerDrag(Marker marker) {
@@ -365,13 +362,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         DbTables.RadioMap.TABLE_NAME,
                         update,
                         DbTables.RadioMap.COL_SSID + " = ?",
-                        new String[] {marker.getTitle()}
+                        new String[]{marker.getTitle()}
                 );
             }
         }
 
         @Override
-        public void onMarkerDragEnd(Marker marker) { }
+        public void onMarkerDragEnd(Marker marker) {
+        }
     };
 
     /**
@@ -478,6 +476,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     /**
      * Function to get all base stations from the database.
+     *
      * @return List with all base stations.
      */
     private ArrayList<BaseStation> getBaseStations() {
@@ -488,6 +487,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     /**
      * Function to convert the data from the data base into {@see BaseStation}.
+     *
      * @param cursor with Data from the database.
      * @return List with all base stations.
      */
@@ -516,6 +516,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     /**
      * Function to add a scanresult to the database, to create the radiomap.
+     *
      * @param baseStation : Data to write to the database.
      */
     private void addToDb(BaseStation baseStation) {
@@ -575,7 +576,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             Log.e(TAG, "Try to unregister reciever" + e.getMessage());
         }
 
-        if (droneController!= null) droneController.destroy();
+        if (droneController != null) droneController.destroy();
         Utils.stopService(WifiScanner.class, getActivity());
     }
 
