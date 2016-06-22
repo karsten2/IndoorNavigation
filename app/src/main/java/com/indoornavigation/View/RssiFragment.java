@@ -53,15 +53,15 @@ public class RssiFragment extends Fragment {
     private BaseStation bsFilter;
     private TextView txtFilter;
     private final String fileHeader =
-            "DATE;SSID;DISTANCE;RAW;MEAN_5;MEAN_10;MEAN_20;MEDIAN_5;MEDIAN_10;MEDIAN_20"
-                    + ";PREDICTION_RAW;PREDICTION_MEAN_5;PREDICTION_MEAN_10;PREDICTION_MEAN_20"
-                    + ";PREDICTION_MEDIAN_5;PREDICTION_MEDIAN_10;PREDICTION_MEDIAN_20"
-                    + ";PROX_CALC_RAW;PROX_CALC_MEAN_5;PROX_CALC_MEAN_10;PROX_CALC_MEAN_20"
-                    + ";PROX_CALC_MEDIAN_5;PROX_CALC_MEDIAN_10;PROX_CALC_MEDIAN_20";
+            "DATE;SSID;DISTANCE;RAW;MEAN_25;MEAN_50;MEAN_75;MEDIAN_25;MEDIAN_50;MEDIAN_75"
+                    + ";PREDICTION_RAW;PREDICTION_MEAN_25;PREDICTION_MEAN_50;PREDICTION_MEAN_75"
+                    + ";PREDICTION_MEDIAN_25;PREDICTION_MEDIAN_50;PREDICTION_MEDIAN_75"
+                    + ";PROX_CALC_RAW;PROX_CALC_MEAN_25;PROX_CALC_MEAN_50;PROX_CALC_MEAN_75"
+                    + ";PROX_CALC_MEDIAN_25;PROX_CALC_MEDIAN_50;PROX_CALC_MEDIAN_75\n";
     private BufferedWriter bw;
     private SQLiteDBHelper dbHelper;
 
-    Statistics statistics_5, statistics_10, statistics_20;
+    Statistics statistics_25, statistics_50, statistics_75;
 
     private boolean creatingStatistics = false;
 
@@ -149,9 +149,9 @@ public class RssiFragment extends Fragment {
                     if (txtNumber != null)
                         distance = Double.valueOf(txtNumber.getText().toString());
 
-                    statistics_5 = new Statistics(5);
-                    statistics_10 = new Statistics(10);
-                    statistics_20 = new Statistics(20);
+                    statistics_25 = new Statistics(25);
+                    statistics_50 = new Statistics(50);
+                    statistics_75 = new Statistics(75);
 
                     MyTask myTask = new MyTask();
 
@@ -271,46 +271,46 @@ public class RssiFragment extends Fragment {
 
                     SRegression sRegression = new SRegression(true);
 
-                    statistics_5.add(bs.getRssi());
-                    statistics_10.add(bs.getRssi());
-                    statistics_20.add(bs.getRssi());
+                    statistics_25.add(bs.getRssi());
+                    statistics_50.add(bs.getRssi());
+                    statistics_75.add(bs.getRssi());
 
-                    double mean_5 = statistics_5.getMean();
-                    double mean_10 = statistics_10.getMean();
-                    double mean_20 = statistics_20.getMean();
+                    double mean_25 = statistics_25.getMean();
+                    double mean_50 = statistics_50.getMean();
+                    double mean_75 = statistics_75.getMean();
 
-                    double median_5 = statistics_5.getMedian();
-                    double median_10 = statistics_10.getMedian();
-                    double median_20 = statistics_20.getMedian();
+                    double median_25 = statistics_25.getMedian();
+                    double median_50 = statistics_50.getMedian();
+                    double median_75 = statistics_75.getMedian();
 
                     double predictionRaw = sRegression.getPrediction(rssiRaw);
-                    double predictionMean_5 = sRegression.getPrediction(mean_5);
-                    double predictionMean_10 = sRegression.getPrediction(mean_10);
-                    double predictionMean_20 = sRegression.getPrediction(mean_20);
-                    double predictionMedian_5 = sRegression.getPrediction(median_5);
-                    double predictionMedian_10 = sRegression.getPrediction(median_10);
-                    double predictionMedian_20 = sRegression.getPrediction(median_20);
+                    double predictionMean_25 = sRegression.getPrediction(mean_25);
+                    double predictionMean_50 = sRegression.getPrediction(mean_50);
+                    double predictionMean_75 = sRegression.getPrediction(mean_75);
+                    double predictionMedian_25 = sRegression.getPrediction(median_25);
+                    double predictionMedian_50 = sRegression.getPrediction(median_50);
+                    double predictionMedian_75 = sRegression.getPrediction(median_75);
 
                     double proxCalcRaw = calculateDistance(rssiRaw, freqMhz);
-                    double proxCalcMean_5 = calculateDistance(mean_5, freqMhz);
-                    double proxCalcMean_10 = calculateDistance(mean_10, freqMhz);
-                    double proxCalcMean_20 = calculateDistance(mean_20, freqMhz);
-                    double proxCalcMedian_5 = calculateDistance(median_5, freqMhz);
-                    double proxCalcMedian_10 = calculateDistance(median_10, freqMhz);
-                    double proxCalcMedian_20 = calculateDistance(median_20, freqMhz);
+                    double proxCalcMean_25 = calculateDistance(mean_25, freqMhz);
+                    double proxCalcMean_50 = calculateDistance(mean_50, freqMhz);
+                    double proxCalcMean_75 = calculateDistance(mean_75, freqMhz);
+                    double proxCalcMedian_25 = calculateDistance(median_25, freqMhz);
+                    double proxCalcMedian_50 = calculateDistance(median_50, freqMhz);
+                    double proxCalcMedian_75 = calculateDistance(median_75, freqMhz);
 
 
                     String writer = distance + ";" + rssiRaw
-                            + ";" + mean_5 + ";" + mean_10 + ";" + mean_20
-                            + ";" + median_5 + ";" + median_10 + ";" + median_20
+                            + ";" + mean_25 + ";" + mean_50 + ";" + mean_75
+                            + ";" + median_25 + ";" + median_50 + ";" + median_75
                             + ";" + predictionRaw
-                            + ";" + predictionMean_5 + ";" + predictionMean_10 + ";" + predictionMean_20
-                            + ";" + predictionMedian_5 + ";" + predictionMedian_10 + ";" + predictionMedian_20
+                            + ";" + predictionMean_25 + ";" + predictionMean_50 + ";" + predictionMean_75
+                            + ";" + predictionMedian_25 + ";" + predictionMedian_50 + ";" + predictionMedian_75
                             + ";" + proxCalcRaw
-                            + ";" + proxCalcMean_5 + ";" + proxCalcMean_10 + ";" + proxCalcMean_20
-                            + ";" + proxCalcMedian_5 + ";" + proxCalcMedian_10 + ";" + proxCalcMedian_20;
+                            + ";" + proxCalcMean_25 + ";" + proxCalcMean_50 + ";" + proxCalcMean_75
+                            + ";" + proxCalcMedian_25 + ";" + proxCalcMedian_50 + ";" + proxCalcMedian_75;
 
-                    writeData(bs.toString() + writer);
+                    writeData(bs.toString() + writer + "\n");
                 }
             }
             creatingStatistics = false;

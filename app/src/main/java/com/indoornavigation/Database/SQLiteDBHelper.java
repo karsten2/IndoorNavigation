@@ -13,35 +13,38 @@ import java.util.Map;
 
 /**
  * Class for Database handling.
+ * Creates database tables.
+ * Provides functions for CRUD-Operations and raw sql queries.
+ * Requires Context.
  */
 public class SQLiteDBHelper extends SQLiteOpenHelper {
     public static final int DATABASE_VERSION = 1;
     public static final String DATABASE_NAME = "radiomap.db";
     private final String TAG = "sqlite";
 
+    /**
+     * Constructor will create all database tables, if not exists.
+     * @param context that calls the dbHelper class.
+     */
     public SQLiteDBHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
         SQLiteDatabase db = this.getWritableDatabase();
 
-        Log.d("sql", DbTables.RadioMap.SQL_CREATE_ENTRIES +
-                "\n" + DbTables.ApRegressionValues.SQL_CREATE_ENTRIES);
+        Log.d("sql", "Creating database tables.");
         db.execSQL(DbTables.RadioMap.SQL_CREATE_ENTRIES);
         db.execSQL(DbTables.ApRegressionValues.SQL_CREATE_ENTRIES);
+        db.execSQL(DbTables.RadioMap_3.SQL_CREATE_ENTRIES);
+        db.execSQL(DbTables.RadioMap_4.SQL_CREATE_ENTRIES);
+        db.execSQL(DbTables.RadioMap_5.SQL_CREATE_ENTRIES);
+        db.execSQL(DbTables.RadioMap_6.SQL_CREATE_ENTRIES);
     }
 
     @Override
-    public void onCreate(SQLiteDatabase db) {
-        //db.execSQL(DbTables.RadioMap.SQL_DROP_TABLE);
-
-        Log.d("sql", "Trying to create sql tables, if not exists...");
-        db.execSQL(DbTables.RadioMap.SQL_CREATE_ENTRIES);
-        db.execSQL(DbTables.ApRegressionValues.SQL_CREATE_ENTRIES);
-    }
+    public void onCreate(SQLiteDatabase db) { }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         db.execSQL(DbTables.RadioMap.SQL_DELETE_ENTRIES);
-        onUpgrade(db, oldVersion, newVersion);
     }
 
     @Override

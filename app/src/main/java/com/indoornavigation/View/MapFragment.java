@@ -76,6 +76,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private GoogleMap mMap;
     private LatLng currentPosition;
 
+    private MarkerOptions mMarkerOptDronePosition;
     private Marker mMarkerDronePosition;
 
     private CustomPolyLine route;
@@ -119,9 +120,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         @Override
         public void positionChangedListener(LatLng latLng, float bearing) {
             if (mMarkerDronePosition != null) {
-                mMarkerDronePosition.setVisible(true);
-                mMarkerDronePosition.setPosition(latLng);
-                mMarkerDronePosition.setRotation(bearing);
+
+                mMarkerDronePosition = mMap.addMarker(mMarkerOptDronePosition
+                        .visible(true)
+                        .position(latLng)
+                        .rotation(bearing));
             }
         }
 
@@ -272,8 +275,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         // Prepare marker for drone position.
         BitmapDescriptor iconDrone = BitmapDescriptorFactory.fromResource(R.drawable.ic_play_arrow_red_a700_24dp);
-        mMarkerDronePosition = mMap.addMarker(new MarkerOptions().icon(iconDrone)
-                .visible(false).position(new LatLng(0, 0)));
+        mMarkerOptDronePosition = new MarkerOptions().icon(iconDrone);
 
         // drawing the access points stored in the database.
         drawAccessPoints();
