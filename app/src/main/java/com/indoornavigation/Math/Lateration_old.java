@@ -1,23 +1,32 @@
 package com.indoornavigation.Math;
 
 import android.annotation.SuppressLint;
+import android.util.Log;
 
 import com.google.android.gms.maps.model.LatLng;
+import com.google.maps.android.geometry.Point;
+import com.indoornavigation.Math.Lateration.LinearLeastSquaresSolver;
+import com.indoornavigation.Math.Lateration.NonLinearLeastSquaresSolver;
+import com.indoornavigation.Math.Lateration.TrilaterationFunction;
 import com.indoornavigation.Model.BaseStation;
 
-import org.apache.commons.math3.linear.Array2DRowRealMatrix;
-import org.apache.commons.math3.linear.DecompositionSolver;
-import org.apache.commons.math3.linear.LUDecomposition;
+import org.apache.commons.math3.fitting.leastsquares.LeastSquaresOptimizer;
+import org.apache.commons.math3.fitting.leastsquares.LevenbergMarquardtOptimizer;
 import org.apache.commons.math3.linear.RealMatrix;
+import org.apache.commons.math3.linear.RealVector;
+
+import com.google.maps.android.projection.SphericalMercatorProjection;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
  * Class to compute a position based on fixed base stations via lateration.
+ * https://github.com/lemmingapex/Trilateration
  */
-public abstract class Lateration {
+public abstract class Lateration_old {
 
-    private static final String TAG = "Lateration";
+    private static final String TAG = "Lateration_old";
 
     /**
      * Using the formula A*Pe = b to get Xe, Ye
@@ -29,13 +38,13 @@ public abstract class Lateration {
 
         LatLng ret = new LatLng(0, 0);
 
-        if (baseStations.size() >= 3) try {
+        /*if (baseStations.size() >= 3) try {
             /**
              * Formula for least squares method:
              *      |xe|
              * Pe = |ye| = (A^T * A)^(-1) * A^T * b
              */
-            double[][] A = generateMatrixA(baseStations);
+            /*double[][] A = generateMatrixA(baseStations);
             double[][] _A = transformA(A);
             double[][] b = generateMatrixB(baseStations);
 
@@ -57,9 +66,67 @@ public abstract class Lateration {
 
         } catch (IllegalArgumentException e) {
             //Log.e(TAG, e.getMessage());
+        }*/
+
+        if (baseStations.size() >= 3) {
+            double[][] positions = new double[baseStations.size()][2];
+            double[] distances = new double[baseStations.size()];
+
+            // Math.cos(d/R)
+            double earthRadius = 6371000.8; // in meter
+
+            for (int i = 0; i < baseStations.size(); i ++) {
+
+                Point p = latLngToMerc(baseStations.get(i).getLatLng().latitude,
+                        baseStations.get(i).getLatLng().longitude);
+                positions[i][0] = p.x;
+                positions[i][1] = p.y;
+                distances[i] = baseStations.get(i).getDistance();
+
+            }
+
+            TrilaterationFunction trilaterationFunction = new TrilaterationFunction(positions, distances);
+            LinearLeastSquaresSolver lSolver = new LinearLeastSquaresSolver(trilaterationFunction);
+            RealVector x = lSolver.solve();
+
+            NonLinearLeastSquaresSolver solver = new NonLinearLeastSquaresSolver(new TrilaterationFunction(positions, distances), new LevenbergMarquardtOptimizer());
+            LeastSquaresOptimizer.Optimum optimum = solver.solve();
+
+            // the answer
+            double[] centroid = optimum.getPoint().toArray();
+
+            // error and geometry information; may throw SingularMatrixException depending the threshold argument provided
+            RealVector standardDeviation = optimum.getSigma(0);
+            RealMatrix covarianceMatrix = optimum.getCovariances(0);
+
+            //Log.d("Lateration", "Position: " + Arrays.toString(centroid) + " || Distances: " + Arrays.toString(distances));
+            //Log.d("Lateration", "Position: " + x.toString() + " || Distances: " + Arrays.toString(distances));
+
+            double[] lin = x.toArray();
+
+            ret = mercToLatLng(new Point(centroid[0], centroid[1]));
+            Log.d("Lateration", ret.toString());
+
+
+            return ret;
+            //return mercToLatLng(new Point(lin[0], lin[1]));
         }
 
         return ret;
+    }
+
+    private static Point latLngToMerc(double lat, double lng) {
+        final double earthR = 6371800;
+        SphericalMercatorProjection sphericalMercatorProjection =
+                new SphericalMercatorProjection(earthR);
+        return sphericalMercatorProjection.toPoint(new LatLng(lat, lng));
+    }
+
+    private static LatLng mercToLatLng(Point xy) {
+        final double earthR = 6371800;
+        SphericalMercatorProjection sphericalMercatorProjection =
+                new SphericalMercatorProjection(earthR);
+        return sphericalMercatorProjection.toLatLng(xy);
     }
 
     /**
@@ -183,5 +250,7 @@ public abstract class Lateration {
         }
         return result;
     }
+
+
 
 }

@@ -19,6 +19,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.google.android.gms.maps.model.LatLng;
@@ -67,6 +68,10 @@ public class RssiFragment extends Fragment {
     Statistics statistics_1, statistics_2, statistics_3;
 
     private boolean creatingStatistics = false;
+
+    private Button btnAddFilter;
+    private Button btnStart;
+    private ProgressBar pbar;
 
     public RssiFragment() {
         // Required empty public constructor
@@ -132,7 +137,9 @@ public class RssiFragment extends Fragment {
         DroneController droneController = new DroneController(getContext());
         droneController.setListener(mDroneControllerListener);
 
-        Button btnAddFilter = (Button) view.findViewById(R.id.btnAddFilter);
+        pbar = (ProgressBar) view.findViewById(R.id.pbar);
+
+        btnAddFilter = (Button) view.findViewById(R.id.btnAddFilter);
         if (btnAddFilter != null) {
             btnAddFilter.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -146,7 +153,7 @@ public class RssiFragment extends Fragment {
 
         final EditText txtNumber = (EditText) view.findViewById(R.id.txtNumber);
 
-        Button btnStart = (Button) view.findViewById(R.id.btnStart);
+        btnStart = (Button) view.findViewById(R.id.btnStart);
         if (btnStart != null) {
             btnStart.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -353,6 +360,19 @@ public class RssiFragment extends Fragment {
             return regrValues;
         }
         return new double[][]{};
+    }
+
+    /**
+     * Deactivates buttons and shows a progress bar.
+     * @param disable true to disable, false to enable.
+     */
+    private void guiDisable(boolean disable) {
+        if (btnStart != null)
+            btnStart.setEnabled(!disable);
+        if (btnAddFilter != null)
+            btnAddFilter.setEnabled(!disable);
+        if (pbar != null)
+            pbar.setVisibility((disable ? View.VISIBLE : View.INVISIBLE));
     }
 
     @Override

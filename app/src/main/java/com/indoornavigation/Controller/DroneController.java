@@ -11,6 +11,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.maps.android.SphericalUtil;
 import com.indoornavigation.Helper.Utils;
+import com.indoornavigation.Math.Lateration_old;
 import com.indoornavigation.Math.SRegression;
 import com.indoornavigation.Math.Statistics;
 import com.parrot.arsdk.ARSDK;
@@ -24,7 +25,6 @@ import com.indoornavigation.Database.DbTables;
 import com.indoornavigation.Database.SQLiteDBHelper;
 import com.indoornavigation.Drone.BebopDrone;
 import com.indoornavigation.Drone.DroneDiscoverer;
-import com.indoornavigation.Math.Lateration;
 import com.indoornavigation.Model.BaseStation;
 
 import java.util.ArrayList;
@@ -53,11 +53,15 @@ public class DroneController {
 
     private ArrayList<BaseStation> dbBaseStations = new ArrayList<>();
     private ArrayList<Statistics> apStatistics = new ArrayList<>();
-    private Statistics droneStatistics;
+    private int statisticsWindowSize = 80;
+    private Statistics droneStatisticsLat = new Statistics(20);
+    private Statistics droneStatisticsLng = new Statistics(20);
 
     private EstimatePosition estimatePositionTask;
 
     private List<Listener> mListener;
+
+
 
     // Load native libraries, mandatory!
     static {
@@ -296,9 +300,9 @@ public class DroneController {
      * Function to move the connected drone.
      * pitch Forward/ backward angle of the drone. Value in percentage from -100 to 100.
      * flag 1 if the pitch and roll values should be used, 0 otherwise.
-     * <p/>
+     * <p>
      * The drone is moved forward, until the coordinates of the drone matches the destination.
-     * <p/>
+     * <p>
      * This function should be started async.
      *
      * @param destination the drone should fly.
@@ -425,9 +429,10 @@ public class DroneController {
      * Function to estimate the drones position with scanned wifi points.
      *
      * @param baseStations scanned from the drone.
+     * @return true if the position changed, false otherwise.
      */
-    private void getPositionFromWifi(ArrayList<BaseStation> baseStations) {
-        // SRegression sRegression = new SRegression(true);
+    private boolean getPositionFromWifi(ArrayList<BaseStation> baseStations) {
+        SRegression sRegression = new SRegression(true);
         double freqInMhz = 2457;
         ArrayList<BaseStation> foundBaseSations = new ArrayList<>();
 
@@ -442,15 +447,20 @@ public class DroneController {
                     if (stat.getName().equals(bs.getSsid())) {
                         found = true;
                         stat.add(bs.getRssi());
-                        bs.setRssi(stat.getMean());
-                        bs.setDistance(Utils.calculateDistance(bs.getRssi(), freqInMhz));
+                        temp.setRssi(stat.getMedian());
+
+                        //double distance = (double) ((int)Math.abs(sRegression.getPrediction(bs.getRssi())) * 10000) / 10000;
+                        double distance = (double) ((int)Math.abs(Utils.calculateDistance(bs.getRssi(), freqInMhz)) * 10000) / 10000;
+
+                        //temp.setDistance(Utils.calculateDistance(bs.getRssi(), freqInMhz));
+                        temp.setDistance(distance);
                         foundBaseSations.add(temp);
                         break;
                     }
                 }
 
                 if (!found) {
-                    Statistics statistics = new Statistics(80, bs.getSsid());
+                    Statistics statistics = new Statistics(statisticsWindowSize, bs.getSsid());
                     statistics.add(bs.getRssi());
                     apStatistics.add(statistics);
                 }
@@ -460,10 +470,13 @@ public class DroneController {
         // laterate Position.
         try {
             //Log.d(TAG, "basestations in database found: " + foundBaseSations.size());
-            LatLng newPosition = Lateration.calculatePosition(foundBaseSations);
+            LatLng newPosition = Lateration_old.calculatePosition(foundBaseSations);
             if (!newPosition.equals(new LatLng(0, 0)) && !newPosition.equals(currentPosition)) {
-                currentPosition = newPosition;
-                notifyPositionChanged(currentPosition, currentAttitudeYaw);
+
+                droneStatisticsLat.add(newPosition.latitude);
+                droneStatisticsLng.add(newPosition.longitude);
+                currentPosition = new LatLng(droneStatisticsLat.getMean(), droneStatisticsLng.getMean());
+                return true;
             }
             Log.d("drone",
                     "\nwifi found: " + baseStations.size()
@@ -472,6 +485,8 @@ public class DroneController {
         } catch (Exception e) {
             //Log.e(TAG, e.getMessage());
         }
+
+        return false;
     }
 
     /**
@@ -516,12 +531,12 @@ public class DroneController {
 
     /**
      * Function to turn the drone around the z-Axis for a specific angle.
-     * <p/>
+     * <p>
      * lat/lng: (0.0,1.0) atan2:     90.0
      * lat/lng: (1.0,0.0) atan2:     0.0
      * lat/lng: (-1.0,0.0)atan2:    -180.0
      * lat/lng: (0.0,-1.0)atan2:    -90.0
-     * <p/>
+     * <p>
      * 90
      * |
      * |
@@ -530,20 +545,19 @@ public class DroneController {
      * |
      * |
      * -90
-     * <p/>
+     * <p>
      * Use modulo to get the correct degrees.
      * degrees = degrees % 360.
      * 0 to 180    will return the same numbers you put in.
      * -180 to -1  return values between 180 to 359 degrees.
-     * <p/>
+     * <p>
      * The function will find out the shortest way to turn the drone (left or right) to reach
      * the wanted bearing.
      *
-     * @param
      */
-    AsyncTask yawTask = new AsyncTask() {
+    AsyncTask yawTask = new AsyncTask<Void, Void, Marker>() {
         @Override
-        protected Object doInBackground(Object[] params) {
+        protected Marker doInBackground(Void... params) {
             if (mBebopDrone != null && droneIsFlying() && route.size() > 0) {
                 final Marker marker = route.get(0);
                 Log.d(TAG, "Next target: " + marker.getPosition().toString());
@@ -573,16 +587,16 @@ public class DroneController {
         }
 
         @Override
-        protected void onPostExecute(Object o) {
-            moveTask.execute(o);
-            super.onPostExecute(o);
+        protected void onPostExecute(Marker marker) {
+            moveTask.execute(marker);
+            super.onPostExecute(marker);
         }
     };
 
-    AsyncTask moveTask = new AsyncTask() {
+    AsyncTask moveTask = new AsyncTask<Marker, Void, Marker>() {
         @Override
-        protected Object doInBackground(Object[] params) {
-            Marker destination = (Marker) params[0];
+        protected Marker doInBackground(Marker... markers) {
+            Marker destination = (Marker) markers[0];
             dronePitch(30, 1);
             final double toleranceDistance = 1;
 
@@ -595,10 +609,8 @@ public class DroneController {
         }
 
         @Override
-        protected void onPostExecute(Object o) {
-            super.onPostExecute(o);
-
-            Marker marker = (Marker) o;
+        protected void onPostExecute(Marker marker) {
+            super.onPostExecute(marker);
 
             route.remove(marker);
 
@@ -685,6 +697,7 @@ public class DroneController {
 
                 while (!(currentAttitudeYaw >= bearing - tolerance
                         && currentAttitudeYaw <= bearing + tolerance)) {
+                    // wait until drone is in position
                 }
 
                 Log.d(TAG, "Drone yawed for: " + result);
@@ -713,7 +726,7 @@ public class DroneController {
             try {
                 Thread.sleep(3000);
             } catch (InterruptedException e) {
-
+//
             }
 
             dronePitch(0, 0);
@@ -731,20 +744,25 @@ public class DroneController {
         }
     }
 
-    private class EstimatePosition extends AsyncTask {
+    private class EstimatePosition extends AsyncTask<ArrayList<BaseStation>, Void, Boolean> {
+        @SafeVarargs
         @Override
-        protected Object doInBackground(Object[] params) {
-            if (params != null && params[0] != null) {
+        protected final Boolean doInBackground(ArrayList<BaseStation>... baseStations) {
+            if (baseStations != null && baseStations[0] != null) {
                 try {
-                    ArrayList<BaseStation> scanresults = new ArrayList<>((ArrayList<BaseStation>) params[0]);
-                    if (scanresults != null) {
-                        getPositionFromWifi(scanresults);
-                    }
+                    return getPositionFromWifi(new ArrayList<>(baseStations[0]));
                 } catch (Exception e) {
                     Log.e("estimate position", e.getMessage());
                 }
             }
-            return null;
+            return false;
+        }
+
+        @Override
+        protected void onPostExecute(Boolean notify) {
+            super.onPostExecute(notify);
+            if (notify != null && notify)
+                notifyPositionChanged(currentPosition, currentAttitudeYaw);
         }
     }
 }

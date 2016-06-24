@@ -35,5 +35,5 @@ dependencies {
     compile 'com.google.maps.android:android-maps-utils:0.4'
 
     compile 'com.parrot:arsdk:3.9.1'
-    compile 'org.apache.commons:commons-math3:3.0'
+    compile 'org.apache.commons:commons-math3:3.5'
 }

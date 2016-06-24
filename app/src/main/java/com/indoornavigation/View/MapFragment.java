@@ -123,8 +123,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             // Prepare marker for drone position.
             BitmapDescriptor iconDrone = BitmapDescriptorFactory.fromResource(
                     R.drawable.ic_play_arrow_red_a700_24dp);
-            mMap.addMarker(new MarkerOptions()
-                    .icon(iconStart)
+            if (mMarkerDronePosition != null)
+                mMarkerDronePosition.remove();
+
+            mMarkerDronePosition = mMap.addMarker(new MarkerOptions()
+                    .icon(iconDrone)
                     .position(latLng));
         }
 
