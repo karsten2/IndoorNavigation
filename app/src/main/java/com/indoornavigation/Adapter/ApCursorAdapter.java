@@ -27,7 +27,7 @@ public class ApCursorAdapter extends CursorAdapter {
 
     @Override
     public void bindView(View view, Context context, Cursor cursor) {
-        TextView tvESSID = (TextView) view.findViewById(R.id.txtESSID);
+        TextView tvESSID = (TextView) view.findViewById(R.id.txtSSID);
         TextView tvInfo = (TextView) view.findViewById(R.id.txtInfo);
 
         tvESSID.setText(cursor.getString(

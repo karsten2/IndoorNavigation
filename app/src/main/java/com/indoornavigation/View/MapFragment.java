@@ -462,7 +462,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        addToDb(new BaseStation(wifiAdapter.getItem(which), currentPosition));
+                        dbHelper.addBaseStation(new BaseStation(wifiAdapter.getItem(which), currentPosition));
                         drawAccessPoints();
                     }
                 });
@@ -515,19 +515,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
 
         return ret;
-    }
-
-    /**
-     * Function to add a scanresult to the database, to create the radiomap.
-     *
-     * @param baseStation : Data to write to the database.
-     */
-    private void addToDb(BaseStation baseStation) {
-        long result = dbHelper.sqlInsert(DbTables.RadioMap.TABLE_NAME,
-                null, baseStation.toDbValues());
-
-        Toast.makeText(getContext(), String.valueOf(result) + " rows added.",
-                Toast.LENGTH_SHORT).show();
     }
 
     BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {

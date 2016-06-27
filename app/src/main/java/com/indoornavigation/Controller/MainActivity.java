@@ -4,7 +4,7 @@ import com.indoornavigation.View.DroneFragment;
 import com.indoornavigation.View.MapFragment;
 import com.indoornavigation.View.RssiFragment;
 import com.indoornavigation.View.SqliteFragment;
-import com.indoornavigation.View.WifiFragment;
+import com.indoornavigation.View.RadiomapFragment;
 import com.indoor.navigation.indoornavigation.R;
 
 import android.content.DialogInterface;
@@ -28,7 +28,7 @@ import android.view.MenuItem;
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
         MapFragment.OnFragmentInteractionListener,
-        WifiFragment.OnFragmentInteractionListener,
+        RadiomapFragment.OnFragmentInteractionListener,
         SqliteFragment.OnFragmentInteractionListener,
         DroneFragment.OnFragmentInteractionListener,
         RssiFragment.OnFragmentInteractionListener {
@@ -123,14 +123,9 @@ public class MainActivity extends AppCompatActivity
             if (id == R.id.nav_map) {
                 fragment = MapFragment.class.newInstance();
                 if (actionBar != null) actionBar.setTitle(R.string.title_activity_map);
-            } else if (id == R.id.nav_wifi) {
-                fragment = WifiFragment.class.newInstance();
-                if (actionBar != null) actionBar.setTitle(R.string.title_activity_wifi);
-            } else if (id == R.id.nav_sqlite) {
-                fragment = SqliteFragment.class.newInstance();
-                if (actionBar != null) actionBar.setTitle(R.string.title_fragment_sqlite);
-            } else if (id == R.id.nav_drone) {
-                fragment = DroneFragment.class.newInstance();
+            } else if (id == R.id.nav_radiomap) {
+                fragment = RadiomapFragment.class.newInstance();
+                if (actionBar != null) actionBar.setTitle(R.string.title_fragment_radiomap);
             } else if (id == R.id.nav_data) {
                 fragment = RssiFragment.class.newInstance();
             }

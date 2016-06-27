@@ -9,6 +9,11 @@ import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
+import com.google.android.gms.maps.model.LatLng;
+import com.indoornavigation.Model.BaseStation;
+
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -24,6 +29,7 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
 
     /**
      * Constructor will create all database tables, if not exists.
+     *
      * @param context that calls the dbHelper class.
      */
     public SQLiteDBHelper(Context context) {
@@ -37,10 +43,12 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
         db.execSQL(DbTables.RadioMap_4.SQL_CREATE_ENTRIES);
         db.execSQL(DbTables.RadioMap_5.SQL_CREATE_ENTRIES);
         db.execSQL(DbTables.RadioMap_6.SQL_CREATE_ENTRIES);
+        db.execSQL(DbTables.MeasuringPoints.SQL_CREATE_ENTRIES);
     }
 
     @Override
-    public void onCreate(SQLiteDatabase db) { }
+    public void onCreate(SQLiteDatabase db) {
+    }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
@@ -61,10 +69,10 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
     /**
      * Function to insert data into a db table.
      *
-     * @param tableName             Name of the table to insert data.
-     * @param columnNameNullable    // TODO
-     * @param colValues             Key-Value pairs: Key(Column) -> Value
-     * @return                      Number of inserted rows.
+     * @param tableName          Name of the table to insert data.
+     * @param columnNameNullable // TODO
+     * @param colValues          Key-Value pairs: Key(Column) -> Value
+     * @return Number of inserted rows.
      */
     public long sqlInsert(String tableName,
                           String columnNameNullable,
@@ -84,11 +92,11 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
     /**
      * Function to update a table.
      *
-     * @param tableName         Name of the table to update.
-     * @param colValues         Key-Value pairs: Key(Column) -> Value
-     * @param where             Columns for where. e.g "col1 LIKE ?, col2 = ?" (? for where args)
-     * @param whereArgs         Array of arguments for where part.
-     * @return                  Number of updated rows.
+     * @param tableName Name of the table to update.
+     * @param colValues Key-Value pairs: Key(Column) -> Value
+     * @param where     Columns for where. e.g "col1 LIKE ?, col2 = ?" (? for where args)
+     * @param whereArgs Array of arguments for where part.
+     * @return Number of updated rows.
      */
     public long sqlUpdate(String tableName,
                           Map<String, String> colValues,
@@ -106,23 +114,22 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
     }
 
     /**
-     *
-     * @param tableName         Name of the table to query.
-     * @param columns           Columns to query e.g. {"col1", "col2", ...}
-     * @param whereColumns      Columns for where. e.g "col1 LIKE ?, col2 = ?" (? for where args)
-     * @param whereArgs         Array of arguments for where part.
-     * @param groupBy           Columns to group.
-     * @param filter            // TODO
-     * @param sort              Columns to sort the result.
-     * @return                  Cursor with query results.
+     * @param tableName    Name of the table to query.
+     * @param columns      Columns to query e.g. {"col1", "col2", ...}
+     * @param whereColumns Columns for where. e.g "col1 LIKE ?, col2 = ?" (? for where args)
+     * @param whereArgs    Array of arguments for where part.
+     * @param groupBy      Columns to group.
+     * @param filter       // TODO
+     * @param sort         Columns to sort the result.
+     * @return Cursor with query results.
      */
     public Cursor sqlSelect(String tableName,
-                             String columns[],
-                             String whereColumns,
-                             String whereArgs[],
-                             String groupBy,
-                             String filter,
-                             String sort) {
+                            String columns[],
+                            String whereColumns,
+                            String whereArgs[],
+                            String groupBy,
+                            String filter,
+                            String sort) {
 
         SQLiteDatabase db = this.getReadableDatabase();
 
@@ -138,10 +145,10 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
     /**
      * Function to delete specific rows of a table.
      *
-     * @param tableName     Name of the table.
-     * @param where         Column + command e.g: "col1 LIKE ?" (? for where args)
-     * @param whereArgs     Array of Arguments for where columns
-     * @return              Number of rows deleted.
+     * @param tableName Name of the table.
+     * @param where     Column + command e.g: "col1 LIKE ?" (? for where args)
+     * @param whereArgs Array of Arguments for where columns
+     * @return Number of rows deleted.
      */
     public int sqlDelete(String tableName, String where, String whereArgs[]) {
         int ret = -1;
@@ -156,7 +163,8 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
 
     /**
      * Function to drop a table.
-     * @param query     sql-String to drop a table. See SQL_DROP_TABLE in DbTables.Radiomap.
+     *
+     * @param query sql-String to drop a table. See SQL_DROP_TABLE in DbTables.Radiomap.
      */
     public void dropTable(String query) {
         try {
@@ -169,7 +177,8 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
 
     /**
      * Function to create a table.
-     * @param query     sql-String to create a table. See SQL_CREATE_ENTRIES in DbTables.Radiomap.
+     *
+     * @param query sql-String to create a table. See SQL_CREATE_ENTRIES in DbTables.Radiomap.
      */
     public void createTable(String query) {
         try {
@@ -183,8 +192,9 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
 
     /**
      * Function to do a raw sql query.
-     * @param query     sql-String.
-     * @return          Cursor with the query result.
+     *
+     * @param query sql-String.
+     * @return Cursor with the query result.
      */
     public Cursor rawQuery(String query) {
         SQLiteDatabase db = this.getReadableDatabase();
@@ -193,8 +203,9 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
 
     /**
      * Function to check if a table with a given name exists in the database.
-     * @param tableName     String with the table name.
-     * @return              true if exists, else false.
+     *
+     * @param tableName String with the table name.
+     * @return true if exists, else false.
      */
     public boolean tableExists(String tableName) {
         SQLiteDatabase db = this.getReadableDatabase();
@@ -202,12 +213,79 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='" + tableName + "'",
                 null);
 
-        if (cursor.getCount() <= 0)
-            return false;
-
-        return true;
+        return cursor.getCount() > 0;
 
     }
 
+    /**
+     * Function to add a scanresult to the database, to create the radiomap.
+     *
+     * @param baseStation : Data to write to the database.
+     * @return Database cursor code.
+     */
+    public long addBaseStation(BaseStation baseStation) {
+        return this.sqlInsert(DbTables.RadioMap.TABLE_NAME,
+                null, baseStation.toDbValues());
+    }
 
+    /**
+     * Adding a measuring point to the database.
+     *
+     * @param p Point as LatLng.
+     * @return Database cursor code.
+     */
+    public long addMeasuringPoint(LatLng p, String name) {
+        ContentValues values = new ContentValues();
+
+        values.put(DbTables.MeasuringPoints.COL_LAT, p.latitude);
+        values.put(DbTables.MeasuringPoints.COL_LNG, p.longitude);
+        values.put(DbTables.MeasuringPoints.COL_NAME, name);
+
+        return this.sqlInsert(DbTables.MeasuringPoints.TABLE_NAME, null, values);
+    }
+
+    /**
+     * Gets all measuring points from the database.
+     * @return Hashmap with all measuring points key: name, value: latlng.
+     */
+    public HashMap<String, LatLng> getMeasurementPoints() {
+        HashMap<String, LatLng> dbValues = new HashMap<>();
+        Cursor c = this.rawQuery(DbTables.MeasuringPoints.SQL_SELECT_ALL);
+
+        if (c.moveToFirst()) {
+            do {
+                String name = c.getString(c.getColumnIndexOrThrow("NAME"));
+                double lat = c.getDouble(c.getColumnIndexOrThrow("LAT"));
+                double lng = c.getDouble(c.getColumnIndexOrThrow("LNG"));
+                dbValues.put(name, new LatLng(lat, lng));
+            } while (c.moveToNext());
+        }
+
+        return dbValues;
+    }
+
+    public ArrayList<BaseStation> getBaseStations() {
+
+        ArrayList<BaseStation> ret = new ArrayList<>();
+        Cursor cursor = this.sqlSelect(DbTables.RadioMap.TABLE_NAME,
+                null, null, null, null, null, null);
+
+        if (cursor.moveToFirst()) {
+            do {
+                BaseStation baseStation = new BaseStation();
+                baseStation.setSsid(cursor.getString(cursor.getColumnIndexOrThrow("SSID")));
+                baseStation.setBssid(cursor.getString(cursor.getColumnIndexOrThrow("BSSID")));
+
+                double lat = cursor.getDouble(cursor.getColumnIndexOrThrow("LAT"));
+                double lng = cursor.getDouble(cursor.getColumnIndexOrThrow("LNG"));
+
+                baseStation.setLatLng(new LatLng(lat, lng));
+
+                ret.add(baseStation);
+
+            } while (cursor.moveToNext());
+        }
+
+        return ret;
+    }
 }

@@ -7,12 +7,14 @@ import com.google.android.gms.maps.model.LatLng;
 import com.indoornavigation.Database.DbTables;
 
 import java.io.Serializable;
+import java.util.Comparator;
 
 /**
  * Class that represents a base station in the database.
  */
-public class BaseStation implements Serializable {
+public class BaseStation implements Serializable, Comparator<BaseStation>, Comparable<BaseStation> {
     private String ssid, bssid, ip, mac;
+
     private int channel;
     private LatLng latLng;
     private double distance;
@@ -34,6 +36,11 @@ public class BaseStation implements Serializable {
         this.bssid = scanResult.BSSID;
         this.mac = scanResult.BSSID;
         this.latLng = latLng;
+    }
+
+    public BaseStation(String ssid, double rssi) {
+        this.ssid = ssid;
+        this.rssi = rssi;
     }
 
     public BaseStation(LatLng latLng, double distance, String timeStamp) {
@@ -152,16 +159,32 @@ public class BaseStation implements Serializable {
 
     @Override
     public boolean equals(Object o) {
-        try {
-            if (o != null ) {
-                BaseStation toCompare = (BaseStation) o;
-                if (this.ssid.equals(toCompare.getSsid()))
-                    return true;
-            }
-        } catch (Exception e) {
+
+        if (o == null)
             return false;
+        if (o == this)
+            return true;
+        if (o instanceof BaseStation) {
+            BaseStation toCompare = (BaseStation) o;
+            if (this.ssid.equals(toCompare.getSsid()))
+                return true;
         }
 
         return false;
+    }
+
+    @Override
+    public int compare(BaseStation lhs, BaseStation rhs) {
+        if (lhs.getRssi() > rhs.getRssi())
+            return 1;
+        if (lhs.getRssi() < rhs.getRssi())
+            return -1;
+
+        return 0;
+    }
+
+    @Override
+    public int compareTo(BaseStation another) {
+        return compare(this, another);
     }
 }

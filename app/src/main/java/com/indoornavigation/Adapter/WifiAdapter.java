@@ -30,11 +30,11 @@ public class WifiAdapter extends ArrayAdapter<ScanResult> {
                     R.layout.wifi_row, parent, false);
         }
         // Lookup view for data population
-        TextView tvESSID = (TextView) convertView.findViewById(R.id.txtESSID);
+        TextView tvSSID = (TextView) convertView.findViewById(R.id.txtSSID);
         TextView tvInfo = (TextView) convertView.findViewById(R.id.txtInfo);
         // Populate the data into the template view using the data object
-        tvESSID.setText(scanResult.SSID);
-        tvInfo.setText("Level: " + scanResult.level + " | " + scanResult.BSSID);
+        tvSSID.setText(scanResult.SSID);
+        tvInfo.setText(String.format("Level: %d | + %s", scanResult.level, scanResult.BSSID));
 
         return convertView;
     }

@@ -5,7 +5,7 @@
     <string name="title_activity_wifi">Wifi-Scanner</string>
     <string name="title_activity_drone">Drohnensteuerung</string>
     <string name="title_activity_data">Data</string>
-    <string name="title_fragment_sqlite">Radiomap</string>
+    <string name="title_fragment_radiomap">Radiomap</string>
     <string name="edit_route">Edit route</string>
 
     <string name="fragment_rssi_distance_input">Distance</string>
@@ -17,9 +17,6 @@
 
     <string name="drone_scanning">Scanning for devices</string>
 
-
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="rollright">rollRight</string>
     <string name="roll_left">roll left</string>
     <string name="back">Back</string>
@@ -33,4 +30,15 @@
     <string name="cancel">Cancel</string>
     <string name="accept">Accept</string>
     <string name="moveBy">move by</string>
+    <string name="dauer_der_datenerfassung">Dauer der Datenerfassung</string>
+
+    <string name="dialog_radiomap_measuring_points">Aktuellen Messpunkt auswählen</string>
+    <string name="dialog_radiomap_ap">Basisstationen auswählen</string>
+    <string name="dialog_radiomap_length">Dauer der Messung (in Sekunden)</string>
+    <string name="dialog_radiomap_bearing">Aktuelle Ausrichtung der Drohne</string>
+
+    <string-array name="spinnerRadiomap">
+        <item>Basestation hinzufügen</item>
+        <item>Messpunkt hinzufügen</item>
+    </string-array>
 </resources>

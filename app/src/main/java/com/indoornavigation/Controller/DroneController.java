@@ -654,9 +654,11 @@ public class DroneController {
                 this.droneLand();
             }
 
-            droneDiscoverer.stopDiscovering();
-            droneDiscoverer.cleanup();
-            droneDiscoverer.removeListener(mDiscovererListener);
+            if (droneDiscoverer != null) {
+                droneDiscoverer.stopDiscovering();
+                droneDiscoverer.cleanup();
+                droneDiscoverer.removeListener(mDiscovererListener);
+            }
 
             db.close();
         } catch (Exception e) {
@@ -667,9 +669,9 @@ public class DroneController {
     /**
      * Function to get the modulo, without getting negative values.
      *
-     * @param dividend
-     * @param divisor
-     * @return modulo.
+     * @param dividend Dividend.
+     * @param divisor Divisor.
+     * @return modulo. 
      */
     private double mod(double dividend, int divisor) {
         if (dividend >= 0)

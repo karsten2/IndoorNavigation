@@ -51,7 +51,9 @@ public class WifiScanner extends Service {
             Intent intentService = new Intent();
             intentService.setAction(TAG);
             intentService.putExtra("scanResults", scanResults);
-            getApplication().sendBroadcast(intentService);
+            //getApplication().sendBroadcast(intentService);
+            sendBroadcast(intentService);
+            Log.d(TAG, "Number of scanned wifis: " + scanResults.size());
         }
     };
 

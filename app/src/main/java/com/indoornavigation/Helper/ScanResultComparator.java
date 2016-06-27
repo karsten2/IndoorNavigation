@@ -5,7 +5,7 @@ import android.net.wifi.ScanResult;
 import java.util.Comparator;
 
 /**
- * Created by Karsten on 12.04.2016.
+ * Class to compare wifi scan results.
  */
 public class ScanResultComparator implements Comparator<ScanResult> {
     @Override
