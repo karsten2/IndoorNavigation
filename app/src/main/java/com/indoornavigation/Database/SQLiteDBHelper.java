@@ -40,9 +40,13 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
         db.execSQL(DbTables.RadioMap.SQL_CREATE_ENTRIES);
         db.execSQL(DbTables.ApRegressionValues.SQL_CREATE_ENTRIES);
         db.execSQL(DbTables.RadioMap_3.SQL_CREATE_ENTRIES);
+        db.execSQL(DbTables.RadioMapNormalized_3.SQL_CREATE_ENTRIES);
         db.execSQL(DbTables.RadioMap_4.SQL_CREATE_ENTRIES);
+        db.execSQL(DbTables.RadioMapNormalized_4.SQL_CREATE_ENTRIES);
         db.execSQL(DbTables.RadioMap_5.SQL_CREATE_ENTRIES);
+        db.execSQL(DbTables.RadioMapNormalized_5.SQL_CREATE_ENTRIES);
         db.execSQL(DbTables.RadioMap_6.SQL_CREATE_ENTRIES);
+        db.execSQL(DbTables.RadioMapNormalized_6.SQL_CREATE_ENTRIES);
         db.execSQL(DbTables.MeasuringPoints.SQL_CREATE_ENTRIES);
     }
 
@@ -264,6 +268,10 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
         return dbValues;
     }
 
+    /**
+     * Get all base stations from the database.
+     * @return ArrayList with all found base stations.
+     */
     public ArrayList<BaseStation> getBaseStations() {
 
         ArrayList<BaseStation> ret = new ArrayList<>();
@@ -279,6 +287,9 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
                 double lat = cursor.getDouble(cursor.getColumnIndexOrThrow("LAT"));
                 double lng = cursor.getDouble(cursor.getColumnIndexOrThrow("LNG"));
 
+                int id = cursor.getInt(cursor.getColumnIndexOrThrow("_id"));
+                baseStation.setDbId(id);
+
                 baseStation.setLatLng(new LatLng(lat, lng));
 
                 ret.add(baseStation);
@@ -287,5 +298,64 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
         }
 
         return ret;
+    }
+
+    /**
+     * Check if a query has data.
+     * @param query Data base query as string.
+     * @return true if cursor has data, else false.
+     */
+    public boolean hasData(String query) {
+        Cursor c = this.rawQuery(query);
+
+        return c != null && c.moveToFirst();
+    }
+
+    /**
+     * Creates a Hashmap that contains the LatLng as key and n rss values as normalized vector.
+     *      12.12345 51.12345 -> {0, -2, 3}
+     * @param size number of found base stations. Indicates what db table to use.
+     * @return Hashmap with coordinates and vectors.
+     */
+    public HashMap<LatLng, ArrayList<Double>> getVectorTable(int size) {
+        HashMap<LatLng, ArrayList<Double>> returnValue = new HashMap<>();
+
+        Cursor c = this.rawQuery("SELECT * FROM radiomap_normalized_" + size);
+
+        if (c != null && c.moveToFirst()) {
+            do {
+                LatLng latLng = getLatLng(c.getInt(c.getColumnIndexOrThrow("ID_MEASURING")));
+                ArrayList<Double> rss = new ArrayList<>();
+                for (int i = 1; i <= size; i++) {
+                    rss.add(c.getDouble(c.getColumnIndexOrThrow(String.format("ap%s_id", i))));
+                }
+
+                returnValue.put(latLng, rss);
+
+            } while (c.moveToNext());
+        }
+
+        return returnValue;
+    }
+
+    /**
+     * Get latlng from the measuring table.
+     * @param id of the measuring.
+     * @return LatLng from the measuring point.
+     */
+    public LatLng getLatLng (int id) {
+        LatLng returnValue = new LatLng(0, 0);
+
+        Cursor c = this.rawQuery(
+                String.format("SELECT LAT, LNG FROM %s WHERE _id = %s",
+                        DbTables.MeasuringPoints.TABLE_NAME, id));
+
+        if (c != null && c.moveToFirst()) {
+            double lat = c.getDouble(c.getColumnIndexOrThrow("LAT"));
+            double lng = c.getDouble(c.getColumnIndexOrThrow("LNG"));
+            returnValue = new LatLng(lat, lng);
+        }
+
+        return returnValue;
     }
 }

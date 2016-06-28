@@ -46,9 +46,12 @@ import com.indoornavigation.Database.DbTables;
 import com.indoornavigation.Database.SQLiteDBHelper;
 import com.indoornavigation.Helper.ScanResultComparator;
 import com.indoor.navigation.indoornavigation.R;
+import com.indoornavigation.Helper.Utils;
 import com.indoornavigation.Math.Statistics;
 import com.indoornavigation.Model.BaseStation;
 import com.parrot.arsdk.arcontroller.ARControllerCodec;
+
+import org.apache.commons.math3.geometry.Vector;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -435,6 +438,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
     /**
      * Writes the collected data from the measuring into the database.
      * Creates a string from the statistics.
+     * Automatically creates the normalized database table.
      *
      * @param measuringPoint Name of the measuringPoint.
      * @param bearing of the drone.
@@ -447,24 +451,67 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
 
         Collections.sort(results);
 
-        String query = String.format("INSERT INTO radiomap_%s values (\n" +
-                "ID_MEASURING = (SELECT _ID FROM %s WHERE NAME = %s), \n" +
-                "BEARING = %s \n",
-                results.size(),
+        String query = String.format("INSERT INTO radiomap_%s values (\n", results.size());
+        String queryNormalized = String.format("INSERT INTO radiomap_normalized_%s " +
+                "values (\n", results.size());
+
+        query += String.format(
+                "(SELECT _ID FROM %s WHERE NAME = %s), \n" +
+                "%s, \n",
                 DbTables.MeasuringPoints.TABLE_NAME,
                 measuringPoint,
                 bearing);
 
-        for (int i = 0; i < results.size(); i++) {
-            query += String.format("AP%s_ID = " +
+        queryNormalized += query;
+
+        ArrayList<BaseStation> normalized = normalizeRSS(results);
+
+        for (BaseStation bs : normalized) {
+            queryNormalized += String.format(
                     "(SELECT _ID FROM radiomap WHERE SSID = '%s'), \n" +
-                    "AP_%1$s_RSSI = %s",
-                    i,
-                    results.get(i).getSsid(),
-                    results.get(i).getRssi());
+                            "%s",
+                    bs.getSsid(),
+                    bs.getRssi());
+        }
+
+        for (BaseStation bs : results) {
+            query += String.format(
+                    "(SELECT _ID FROM radiomap WHERE SSID = '%s'), \n" +
+                    "%s",
+                    bs.getSsid(),
+                    bs.getRssi());
         }
 
         query += ")";
+        queryNormalized += ")";
+
+        db.rawQuery(query);
+        db.rawQuery(queryNormalized);
+    }
+
+    /**
+     * Normalizes the rss values before they are written into the database.
+     * Db row: ap1_ssid: test | ap1_rss: -43 | ap2_ssid: test2 | ap1_rss: -37 | ap3_ssid: test3 | ap3_rss: -40 |
+     *                          |-43|                                           |0|
+     *      gives the vector:   |-37| to normalize subtract the first value:    |6|
+     *                          |-40|                                           |3|
+     *
+     * @param baseStations to normalize.
+     * @return normalized baseStations.
+     */
+    private ArrayList<BaseStation> normalizeRSS(ArrayList<BaseStation> baseStations) {
+        ArrayList<BaseStation> returnValues = new ArrayList<>();
+
+        if (baseStations.size() > 0) {
+            double first = returnValues.get(0).getRssi();
+
+            for (BaseStation bs : baseStations) {
+                BaseStation newBs = new BaseStation(bs.getSsid(), bs.getRssi() - first);
+                returnValues.add(newBs);
+            }
+        }
+
+        return returnValues;
     }
 
     /**
@@ -484,6 +531,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
     private void drawBaseStation(BaseStation bs) {
         mMap.addMarker(new MarkerOptions()
                 .position(bs.getLatLng())
+                .anchor(0.5f, 0.5f)
                 .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_router))
                 .title(bs.getSsid())
                 .draggable(true));
@@ -515,6 +563,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
         mMap.addMarker(new MarkerOptions()
                 .position(p)
                 .title(name)
+                .anchor(0.5f, 0.5f)
                 .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_crop_square_black_24dp))
                 .draggable(true));
     }
@@ -567,7 +616,11 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
             return;
         }
 
+        mMap.setOnMarkerClickListener(markerClickListener);
+
         mMap.setMyLocationEnabled(true);
+
+        Utils.addGroundOverlay(mMap);
 
         // get basestations from database
         this.baseStations = db.getBaseStations();
@@ -577,6 +630,13 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
         notifyMeasurementPointsChanged();
         drawMeasuringPoint();
     }
+
+    GoogleMap.OnMarkerClickListener markerClickListener = new GoogleMap.OnMarkerClickListener() {
+        @Override
+        public boolean onMarkerClick(Marker marker) {
+            return false;
+        }
+    };
 
     /**
      * This interface must be implemented by activities that contain this

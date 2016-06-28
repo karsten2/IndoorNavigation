@@ -1,15 +1,11 @@
 package com.indoornavigation.View;
 
 import android.Manifest;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
-import android.net.wifi.ScanResult;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -27,7 +23,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -37,13 +32,13 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
+import com.google.android.gms.maps.model.GroundOverlayOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.indoornavigation.Math.Knn;
 import com.parrot.arsdk.arcontroller.ARControllerCodec;
-import com.indoornavigation.Adapter.WifiAdapter;
 import com.indoornavigation.Controller.DroneController;
 import com.indoornavigation.Database.DbTables;
 import com.indoornavigation.Database.SQLiteDBHelper;
@@ -69,9 +64,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private MenuItem menuAccept;
     private MenuItem menuDelete;
     private MenuItem menuDroneConnectionState;
-
-    private WifiAdapter wifiAdapter;
-    private ArrayList<ScanResult> scanResults = new ArrayList<>();
 
     private GoogleMap mMap;
     private LatLng currentPosition;
@@ -145,9 +137,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        getActivity().registerReceiver(
-                broadcastReceiver, new IntentFilter(WifiScanner.TAG));
-
         dbHelper = new SQLiteDBHelper(getContext());
 
         setHasOptionsMenu(true);
@@ -174,7 +163,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 @Override
                 public void onClick(View v) {
                     getBaseStations();
-                    dialog();
+                    addRoute();
                 }
             });
         }
@@ -280,7 +269,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         drawAccessPoints();
 
         // setting camera position and and zoom level.
-        LatLng latLng = new LatLng(54.33901533, 13.07454586);
+        LatLng latLng = new LatLng(54.33852335, 13.07437386);
         CameraPosition cameraPosition = new CameraPosition.Builder()
                 .target(latLng).zoom(mMap.getMaxZoomLevel()).build();
         CameraUpdate cameraUpdate = CameraUpdateFactory.newCameraPosition(cameraPosition);
@@ -292,6 +281,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
+
+        Utils.addGroundOverlay(mMap);
 
         mMap.setMyLocationEnabled(true);
     }
@@ -328,8 +319,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                             .icon(iconStart)
                             .draggable(true)));
                 } else {
-                    LatLng old = route.get(route.size() - 1).getPosition();
-
                     MarkerOptions markerOptions = new MarkerOptions()
                             .position(latLng)
                             .icon(iconRoute)
@@ -409,24 +398,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         void onFragmentInteraction(Uri uri);
     }
 
-    private void dialog() {
-        final AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setMessage("Add access points or create route.");
-        builder.setPositiveButton("Add Access Point", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialogRadiomap();
-            }
-        });
-        builder.setNegativeButton("Add Route", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                addRoute();
-            }
-        });
-        builder.show();
-    }
-
     private void addRoute() {
 
         setActionBarText(getString(R.string.edit_route));
@@ -444,101 +415,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     }
 
     /**
-     * Function to create a dialog box, that ist filled by all nearby wifi networks.
-     * Selecting a wifi network will add the router to the radiomap database.
-     */
-    private void dialogRadiomap() {
-
-        // start wifi service
-        Utils.startService(WifiScanner.class, getActivity());
-        wifiAdapter = new WifiAdapter(getActivity(), scanResults);
-
-        final AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setTitle("Select Access Point");
-
-        builder.setNegativeButton("Abbrechen", null);
-
-        builder.setAdapter(wifiAdapter,
-                new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        dbHelper.addBaseStation(new BaseStation(wifiAdapter.getItem(which), currentPosition));
-                        drawAccessPoints();
-                    }
-                });
-
-        builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-            @Override
-            public void onDismiss(DialogInterface dialog) {
-                Utils.stopService(WifiScanner.class, getActivity());
-            }
-        });
-
-        builder.create().show();
-    }
-
-    /**
      * Function to get all base stations from the database.
      *
      * @return List with all base stations.
      */
     private ArrayList<BaseStation> getBaseStations() {
-        return getData(dbHelper.sqlSelect(
-                DbTables.RadioMap.TABLE_NAME,
-                null, null, null, null, null, null));
+        return dbHelper.getBaseStations();
     }
-
-    /**
-     * Function to convert the data from the data base into {@see BaseStation}.
-     *
-     * @param cursor with Data from the database.
-     * @return List with all base stations.
-     */
-    private ArrayList<BaseStation> getData(Cursor cursor) {
-
-        ArrayList<BaseStation> ret = new ArrayList<>();
-
-        if (cursor.moveToFirst()) {
-            do {
-                BaseStation baseStation = new BaseStation();
-                baseStation.setSsid(cursor.getString(cursor.getColumnIndexOrThrow("SSID")));
-                baseStation.setBssid(cursor.getString(cursor.getColumnIndexOrThrow("BSSID")));
-
-                double lat = cursor.getDouble(cursor.getColumnIndexOrThrow("LAT"));
-                double lng = cursor.getDouble(cursor.getColumnIndexOrThrow("LNG"));
-
-                baseStation.setLatLng(new LatLng(lat, lng));
-
-                ret.add(baseStation);
-
-            } while (cursor.moveToNext());
-        }
-
-        return ret;
-    }
-
-    BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            try {
-                wifiAdapter.clear();
-                wifiAdapter.addAll((ArrayList<ScanResult>) intent.getExtras().get("scanResults"));
-                wifiAdapter.notifyDataSetChanged();
-                Log.d(TAG, "received data: " + scanResults.size());
-            } catch (ClassCastException e) {
-                Log.e(TAG, "wifi receiver onReceive" + e.getMessage());
-            }
-        }
-    };
 
     @Override
     public void onPause() {
         super.onPause();
-        try {
-            getActivity().unregisterReceiver(broadcastReceiver);
-        } catch (Exception e) {
-            Log.e(TAG, "Try to unregister reciever" + e.getMessage());
-        }
 
         Utils.stopService(WifiScanner.class, getActivity());
     }
@@ -547,24 +434,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public void onStop() {
         super.onStop();
 
-        try {
-            getActivity().unregisterReceiver(broadcastReceiver);
-        } catch (Exception e) {
-            Log.e(TAG, "Try to unregister reciever" + e.getMessage());
-        }
-
         Utils.stopService(WifiScanner.class, getActivity());
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-
-        try {
-            getActivity().unregisterReceiver(broadcastReceiver);
-        } catch (Exception e) {
-            Log.e(TAG, "Try to unregister reciever" + e.getMessage());
-        }
 
         if (droneController != null) droneController.destroy();
         Utils.stopService(WifiScanner.class, getActivity());

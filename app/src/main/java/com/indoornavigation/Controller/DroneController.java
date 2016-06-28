@@ -1,6 +1,7 @@
 package com.indoornavigation.Controller;
 
 import android.content.Context;
+import android.content.Intent;
 import android.database.Cursor;
 import android.os.AsyncTask;
 import android.os.Handler;
@@ -9,6 +10,8 @@ import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
+import com.google.common.base.Functions;
+import com.google.common.collect.Ordering;
 import com.google.maps.android.SphericalUtil;
 import com.indoornavigation.Helper.Utils;
 import com.indoornavigation.Math.Lateration_old;
@@ -28,7 +31,10 @@ import com.indoornavigation.Drone.DroneDiscoverer;
 import com.indoornavigation.Model.BaseStation;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Class that handles all drone events and inputs.
@@ -43,7 +49,6 @@ public class DroneController {
 
     private static final String TAG = "DroneController";
 
-    private LatLng currentPositionGPS;
     private LatLng currentPosition = new LatLng(-1, -1);
     private float currentAttitudeYaw;
 
@@ -58,6 +63,11 @@ public class DroneController {
     private Statistics droneStatisticsLng = new Statistics(20);
 
     private EstimatePosition estimatePositionTask;
+
+    private HashMap<LatLng, ArrayList<Double>> vectorTable3 = new HashMap<>();
+    private HashMap<LatLng, ArrayList<Double>> vectorTable4 = new HashMap<>();
+    private HashMap<LatLng, ArrayList<Double>> vectorTable5 = new HashMap<>();
+    private HashMap<LatLng, ArrayList<Double>> vectorTable6 = new HashMap<>();
 
     private List<Listener> mListener;
 
@@ -91,7 +101,7 @@ public class DroneController {
     }
 
     /**
-     * Event that fires when a marker is added to array routeDone.
+     * Event fires when a marker is added to array routeDone.
      *
      * @param marker the last added Marker in array routeDone.
      */
@@ -102,7 +112,7 @@ public class DroneController {
     }
 
     /**
-     * Event that fires when the drone sends a video.
+     * Event fires when the drone sends a video.
      *
      * @param codec that contains the video from the drone.
      */
@@ -145,17 +155,19 @@ public class DroneController {
         }
     }
 
-
     public DroneController(Context context) {
         this.context = context;
 
         db = new SQLiteDBHelper(context);
-        this.dbBaseStations = getCursorData(db.rawQuery(DbTables.RadioMap.SQL_SELECT_ALL));
+        this.dbBaseStations = db.getBaseStations();
 
         droneDiscoverer = new DroneDiscoverer(context);
         droneDiscoverer.setup();
         droneDiscoverer.addListener(mDiscovererListener);
         droneDiscoverer.startDiscovering();
+
+        // tables that contain all the data from the offline phase.
+        loadVectorTables();
     }
 
     private Handler handler = new Handler();
@@ -281,16 +293,34 @@ public class DroneController {
         @Override
         public void onAttitudeChanged(float roll, float pitch, float yaw) {
             currentAttitudeYaw = radToDeg(yaw);
-
-            //Log.d(TAG, String.valueOf(currentAttitudeYaw) );
         }
 
         @Override
         public void onPositionChanged(double latitude, double longitude, double altitude) {
-            currentPositionGPS = new LatLng(latitude, longitude);
             //Log.d(TAG, currentPositionGPS.toString());
         }
     };
+
+    /**
+     * Load all vector tables from the database.
+     */
+    private void loadVectorTables() {
+        this.vectorTable3 = db.getVectorTable(3);
+        this.vectorTable4 = db.getVectorTable(4);
+        this.vectorTable5 = db.getVectorTable(5);
+        this.vectorTable6 = db.getVectorTable(6);
+    }
+
+    private HashMap<LatLng, ArrayList<Double>> getVectorTable(int size) {
+        switch (size) {
+            case 3: return this.vectorTable3;
+            case 4: return this.vectorTable4;
+            case 5: return this.vectorTable5;
+            case 6: return this.vectorTable6;
+        }
+
+        return new HashMap<>();
+    }
 
     public BebopDrone.Listener getBebopListener() {
         return this.mBebopListener;
@@ -375,66 +405,15 @@ public class DroneController {
     }
 
     /**
-     * Function to get data from database cursor.
-     *
-     * @param cursor from Database.
-     * @return List with all BaseStations from Database.
-     */
-    public ArrayList<BaseStation> getCursorData(Cursor cursor) {
-        ArrayList<BaseStation> ret = new ArrayList<>();
-
-        if (cursor != null && !cursor.isClosed()) {
-            if (cursor.moveToFirst()) {
-                do {
-                    try {
-                        BaseStation bs = new BaseStation();
-                        bs.setSsid(cursor.getString(cursor.getColumnIndex(DbTables.RadioMap.COL_SSID)));
-                        bs.setLatLng(new LatLng(
-                                cursor.getDouble(cursor.getColumnIndex(DbTables.RadioMap.COL_LAT)),
-                                cursor.getDouble(cursor.getColumnIndex(DbTables.RadioMap.COL_LNG))
-                        ));
-                        ret.add(bs);
-                    } catch (Exception e) {
-                        Log.e(TAG, e.getMessage());
-                    }
-                } while (cursor.moveToNext());
-
-                cursor.close();
-            }
-        }
-        return ret;
-    }
-
-    private ArrayList<BaseStation> getBsFromDb(ArrayList<BaseStation> baseStations) {
-        ArrayList<BaseStation> foundBaseSations = new ArrayList<>();
-
-        // find base stations in database.
-        for (BaseStation bs : baseStations) {
-            Cursor c = db.sqlSelect(
-                    DbTables.RadioMap.TABLE_NAME,
-                    null,
-                    DbTables.RadioMap.COL_SSID + " = ?",
-                    new String[]{(bs.getSsid() != null ? bs.getSsid() : "")},
-                    null, null, null
-            );
-
-            Cursor c2 = db.rawQuery("select * from radiomap where ssid = '" + bs.getSsid() + "'");
-            foundBaseSations.addAll(getCursorData(c));
-        }
-
-        return foundBaseSations;
-    }
-
-    /**
      * Function to estimate the drones position with scanned wifi points.
      *
      * @param baseStations scanned from the drone.
      * @return true if the position changed, false otherwise.
      */
-    private boolean getPositionFromWifi(ArrayList<BaseStation> baseStations) {
+    private boolean getPositionFromRSS(ArrayList<BaseStation> baseStations) {
         SRegression sRegression = new SRegression(true);
         double freqInMhz = 2457;
-        ArrayList<BaseStation> foundBaseSations = new ArrayList<>();
+        ArrayList<BaseStation> foundBaseStations = new ArrayList<>();
 
         // smooth rssi data for every baseStation
         for (BaseStation bs : baseStations) {
@@ -454,7 +433,7 @@ public class DroneController {
 
                         //temp.setDistance(Utils.calculateDistance(bs.getRssi(), freqInMhz));
                         temp.setDistance(distance);
-                        foundBaseSations.add(temp);
+                        foundBaseStations.add(temp);
                         break;
                     }
                 }
@@ -470,7 +449,7 @@ public class DroneController {
         // laterate Position.
         try {
             //Log.d(TAG, "basestations in database found: " + foundBaseSations.size());
-            LatLng newPosition = Lateration_old.calculatePosition(foundBaseSations);
+            LatLng newPosition = Lateration_old.calculatePosition(foundBaseStations);
             if (!newPosition.equals(new LatLng(0, 0)) && !newPosition.equals(currentPosition)) {
 
                 droneStatisticsLat.add(newPosition.latitude);
@@ -480,11 +459,74 @@ public class DroneController {
             }
             Log.d("drone",
                     "\nwifi found: " + baseStations.size()
-                            + "\nwifi in db found: " + foundBaseSations.size()
+                            + "\nwifi in db found: " + foundBaseStations.size()
                             + "\ncalculated Position: " + currentPosition.toString());
         } catch (Exception e) {
             //Log.e(TAG, e.getMessage());
         }
+
+        return false;
+    }
+
+
+    private boolean getPositionFromRadiomap(ArrayList<BaseStation> scanResults) {
+
+        ArrayList<BaseStation> foundBaseStations = new ArrayList<>();
+        ArrayList<Integer> foundIds = new ArrayList<>();
+        ArrayList<Double> foundRSS = new ArrayList<>();
+
+        // check which base stations in the scan results are part of the db base stations.
+        for (BaseStation bs : scanResults) {
+            boolean found = false;
+
+            if (dbBaseStations.contains(bs)) {
+                BaseStation temp = dbBaseStations.get(dbBaseStations.indexOf(bs));
+
+                for (Statistics stat : apStatistics) {
+                    if (stat.getName().equals(bs.getSsid())) {
+                        found = true;
+                        stat.add(bs.getRssi());
+                        temp.setRssi(stat.getMean());
+                        foundBaseStations.add(temp);
+                        foundIds.add(temp.getDbId());
+                        foundRSS.add(bs.getRssi());
+                        break;
+                    }
+                }
+
+                if (!found) {
+                    Statistics statistics = new Statistics(statisticsWindowSize, bs.getSsid());
+                    statistics.add(bs.getRssi());
+                    apStatistics.add(statistics);
+                }
+
+            }
+        }
+
+        // Get ids from the database
+        if (db.hasData(
+                DbTables.tableContainsAps(
+                        "radiomap_normalized_" + foundBaseStations.size(), foundIds))) {
+            HashMap<LatLng, ArrayList<Double>> vectorTable =
+                    getVectorTable(foundBaseStations.size());
+            HashMap<LatLng, Double> vectorDifferences = new HashMap<>();
+
+            foundRSS = Utils.normalizeVector(foundRSS);
+
+            for (Map.Entry<LatLng, ArrayList<Double>> entry : vectorTable.entrySet()) {
+                // subtract vector and get magnitude.
+                double magnitude = Utils.magnitudeVector(Utils.subtractVector(foundRSS, entry.getValue()));
+
+                // put difference in new table
+                vectorDifferences.put(entry.getKey(), magnitude);
+            }
+
+            // find the N smallest values:
+            //ArrayList<Double> sortedDifferences = vectorDifferences.values();
+            //Collections.sort(sortedDifferences);
+
+        }
+
 
         return false;
     }
@@ -752,7 +794,7 @@ public class DroneController {
         protected final Boolean doInBackground(ArrayList<BaseStation>... baseStations) {
             if (baseStations != null && baseStations[0] != null) {
                 try {
-                    return getPositionFromWifi(new ArrayList<>(baseStations[0]));
+                    return getPositionFromRSS(new ArrayList<>(baseStations[0]));
                 } catch (Exception e) {
                     Log.e("estimate position", e.getMessage());
                 }

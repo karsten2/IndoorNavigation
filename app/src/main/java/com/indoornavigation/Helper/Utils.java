@@ -8,6 +8,12 @@ import android.net.wifi.ScanResult;
 import android.os.Environment;
 import android.util.Log;
 
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.GroundOverlayOptions;
+import com.google.android.gms.maps.model.LatLng;
+import com.indoor.navigation.indoornavigation.R;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -138,5 +144,70 @@ public abstract class Utils {
     public static double calculateDistance(double levelInDb, double freqInMHz) {
         double exp = (27.55 - (20 * Math.log10(freqInMHz)) + Math.abs(levelInDb)) / 20.0;
         return Math.pow(10.0, exp);
+    }
+
+    public static ArrayList<Double> normalizeVector(ArrayList<Double> vector) {
+        ArrayList<Double> returnValue = new ArrayList<>();
+
+        if (vector.size() > 0) {
+            Double first = vector.get(0);
+            for (Double d : vector) {
+                returnValue.add(d - first);
+            }
+        }
+
+        return returnValue;
+    }
+
+    /**
+     * Subtract to vectors.
+     * The size of v1 and v2 must be equal.
+     *
+     * @param v1 ArrayList with double values.
+     * @param v2 ArrayList with double values.
+     * @return new vector form v1 and v2.
+     */
+    public static ArrayList<Double> subtractVector(ArrayList<Double> v1, ArrayList<Double> v2) {
+        ArrayList<Double> returnValue  = new ArrayList<>();
+
+        if (v1.size() == v2.size()) {
+            for (int i = 0; i < v1.size(); i ++) {
+                returnValue.add(v1.get(i) - v2.get(i));
+            }
+        }
+
+        return returnValue;
+    }
+
+    /**
+     * Get the vectors magnitude.
+     *      v {1, 2, 3}
+     *      |v| 3.74...
+     *
+     * @param v values of vector as arraylist.
+     * @return magnitude
+     */
+    public static double magnitudeVector(ArrayList<Double> v) {
+
+        double vectorContent = 0;
+
+        for (Double d : v) {
+            vectorContent += Math.pow(d, 2);
+        }
+
+        return Math.sqrt(vectorContent);
+    }
+
+
+    public static void addGroundOverlay(GoogleMap mMap) {
+        LatLng position = new LatLng(54.33845083, 13.074249811);
+        GroundOverlayOptions overlay = new GroundOverlayOptions()
+                .image(BitmapDescriptorFactory.fromResource(R.drawable.floorplan))
+                .position(position, 20)
+                .bearing(346)
+                .anchor(0, 1);
+
+        mMap.addGroundOverlay(overlay);
+
     }
 }

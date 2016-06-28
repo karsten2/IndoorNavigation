@@ -2,6 +2,9 @@ package com.indoornavigation.Database;
 
 import android.provider.BaseColumns;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+
 
 /**
  * Class that represents the database tables within nested abstract classes.
@@ -124,8 +127,8 @@ public final class DbTables {
                 "SELECT * FROM " + RadioMap_3.TABLE_NAME;
     }
 
-    public static abstract class RadioMap_4 implements BaseColumns {
-        public static final String TABLE_NAME = "radiomap_3";
+    public static abstract class RadioMapNormalized_3 implements BaseColumns {
+        public static final String TABLE_NAME = "radiomap_normalized_3";
 
         public static final String REAL_TYPE    = " REAL";
         public static final String INTEGER_TYPE = " INTEGER";
@@ -139,8 +142,48 @@ public final class DbTables {
         public static final String COL_AP2_RSSI     = "AP2_RSSI";
         public static final String COL_AP3_ID       = "AP3_ID";
         public static final String COL_AP3_RSSI     = "AP3_RSSI";
-        public static final String COL_AP4_ID       = "AP3_ID";
-        public static final String COL_AP4_RSSI     = "AP3_RSSI";
+
+        public static final String COMMA_SEP = ", ";
+
+        public static final String SQL_CREATE_ENTRIES =
+                "CREATE TABLE IF NOT EXISTS " + RadioMapNormalized_3.TABLE_NAME + " (" +
+                        RadioMapNormalized_3._ID + " INTEGER PRIMARY KEY," +
+                        RadioMapNormalized_3.COL_ID_MEASURING + INTEGER_TYPE + COMMA_SEP +
+                        RadioMapNormalized_3.COL_BEARING + TEXT_TYPE + COMMA_SEP +
+                        RadioMapNormalized_3.COL_AP1_ID   + INTEGER_TYPE + COMMA_SEP +
+                        RadioMapNormalized_3.COL_AP1_RSSI + REAL_TYPE + COMMA_SEP +
+                        RadioMapNormalized_3.COL_AP2_ID   + INTEGER_TYPE + COMMA_SEP +
+                        RadioMapNormalized_3.COL_AP2_RSSI + REAL_TYPE + COMMA_SEP +
+                        RadioMapNormalized_3.COL_AP3_ID   + INTEGER_TYPE + COMMA_SEP +
+                        RadioMapNormalized_3.COL_AP3_RSSI + REAL_TYPE + ")";
+
+        public static final String SQL_DELETE_ENTRIES =
+                "DELETE FROM " + RadioMapNormalized_3.TABLE_NAME;
+
+        public static final String SQL_DROP_TABLE =
+                "DROP TABLE IF EXISTS " + RadioMapNormalized_3.TABLE_NAME;
+
+        public static final String SQL_SELECT_ALL =
+                "SELECT * FROM " + RadioMapNormalized_3.TABLE_NAME;
+    }
+
+    public static abstract class RadioMap_4 implements BaseColumns {
+        public static final String TABLE_NAME = "radiomap_4";
+
+        public static final String REAL_TYPE    = " REAL";
+        public static final String INTEGER_TYPE = " INTEGER";
+        public static final String TEXT_TYPE    = " TEXT";
+
+        public static final String COL_ID_MEASURING = "ID_MEASURING";
+        public static final String COL_BEARING      = "BEARING";
+        public static final String COL_AP1_ID       = "AP1_ID";
+        public static final String COL_AP1_RSSI     = "AP1_RSSI";
+        public static final String COL_AP2_ID       = "AP2_ID";
+        public static final String COL_AP2_RSSI     = "AP2_RSSI";
+        public static final String COL_AP3_ID       = "AP3_ID";
+        public static final String COL_AP3_RSSI     = "AP3_RSSI";
+        public static final String COL_AP4_ID       = "AP4_ID";
+        public static final String COL_AP4_RSSI     = "AP4_RSSI";
 
         public static final String COMMA_SEP = ", ";
 
@@ -168,8 +211,8 @@ public final class DbTables {
                 "SELECT * FROM " + RadioMap_4.TABLE_NAME;
     }
 
-    public static abstract class RadioMap_5 implements BaseColumns {
-        public static final String TABLE_NAME = "radiomap_3";
+    public static abstract class RadioMapNormalized_4 implements BaseColumns {
+        public static final String TABLE_NAME = "radiomap_normalized_4";
 
         public static final String REAL_TYPE    = " REAL";
         public static final String INTEGER_TYPE = " INTEGER";
@@ -183,10 +226,54 @@ public final class DbTables {
         public static final String COL_AP2_RSSI     = "AP2_RSSI";
         public static final String COL_AP3_ID       = "AP3_ID";
         public static final String COL_AP3_RSSI     = "AP3_RSSI";
-        public static final String COL_AP4_ID       = "AP3_ID";
-        public static final String COL_AP4_RSSI     = "AP3_RSSI";
-        public static final String COL_AP5_ID       = "AP3_ID";
-        public static final String COL_AP5_RSSI     = "AP3_RSSI";
+        public static final String COL_AP4_ID       = "AP4_ID";
+        public static final String COL_AP4_RSSI     = "AP4_RSSI";
+
+        public static final String COMMA_SEP = ", ";
+
+        public static final String SQL_CREATE_ENTRIES =
+                "CREATE TABLE IF NOT EXISTS " + RadioMapNormalized_4.TABLE_NAME + " (" +
+                        RadioMapNormalized_4._ID + " INTEGER PRIMARY KEY," +
+                        RadioMapNormalized_4.COL_ID_MEASURING + INTEGER_TYPE + COMMA_SEP +
+                        RadioMapNormalized_4.COL_BEARING + TEXT_TYPE + COMMA_SEP +
+                        RadioMapNormalized_4.COL_AP1_ID   + INTEGER_TYPE + COMMA_SEP +
+                        RadioMapNormalized_4.COL_AP1_RSSI + REAL_TYPE + COMMA_SEP +
+                        RadioMapNormalized_4.COL_AP2_ID   + INTEGER_TYPE + COMMA_SEP +
+                        RadioMapNormalized_4.COL_AP2_RSSI + REAL_TYPE + COMMA_SEP +
+                        RadioMapNormalized_4.COL_AP3_ID   + INTEGER_TYPE + COMMA_SEP +
+                        RadioMapNormalized_4.COL_AP3_RSSI + REAL_TYPE + COMMA_SEP +
+                        RadioMapNormalized_4.COL_AP4_ID   + INTEGER_TYPE + COMMA_SEP +
+                        RadioMapNormalized_4.COL_AP4_RSSI + REAL_TYPE + ")";
+
+        public static final String SQL_DELETE_ENTRIES =
+                "DELETE FROM " + RadioMapNormalized_4.TABLE_NAME;
+
+        public static final String SQL_DROP_TABLE =
+                "DROP TABLE IF EXISTS " + RadioMapNormalized_4.TABLE_NAME;
+
+        public static final String SQL_SELECT_ALL =
+                "SELECT * FROM " + RadioMapNormalized_4.TABLE_NAME;
+    }
+
+    public static abstract class RadioMap_5 implements BaseColumns {
+        public static final String TABLE_NAME = "radiomap_5";
+
+        public static final String REAL_TYPE    = " REAL";
+        public static final String INTEGER_TYPE = " INTEGER";
+        public static final String TEXT_TYPE    = " TEXT";
+
+        public static final String COL_ID_MEASURING = "ID_MEASURING";
+        public static final String COL_BEARING      = "BEARING";
+        public static final String COL_AP1_ID       = "AP1_ID";
+        public static final String COL_AP1_RSSI     = "AP1_RSSI";
+        public static final String COL_AP2_ID       = "AP2_ID";
+        public static final String COL_AP2_RSSI     = "AP2_RSSI";
+        public static final String COL_AP3_ID       = "AP3_ID";
+        public static final String COL_AP3_RSSI     = "AP3_RSSI";
+        public static final String COL_AP4_ID       = "AP4_ID";
+        public static final String COL_AP4_RSSI     = "AP4_RSSI";
+        public static final String COL_AP5_ID       = "AP5_ID";
+        public static final String COL_AP5_RSSI     = "AP5_RSSI";
 
         public static final String COMMA_SEP = ", ";
 
@@ -216,8 +303,8 @@ public final class DbTables {
                 "SELECT * FROM " + RadioMap_5.TABLE_NAME;
     }
 
-    public static abstract class RadioMap_6 implements BaseColumns {
-        public static final String TABLE_NAME = "radiomap_3";
+    public static abstract class RadioMapNormalized_5 implements BaseColumns {
+        public static final String TABLE_NAME = "radiomap_normalized_5";
 
         public static final String REAL_TYPE    = " REAL";
         public static final String INTEGER_TYPE = " INTEGER";
@@ -231,12 +318,60 @@ public final class DbTables {
         public static final String COL_AP2_RSSI     = "AP2_RSSI";
         public static final String COL_AP3_ID       = "AP3_ID";
         public static final String COL_AP3_RSSI     = "AP3_RSSI";
-        public static final String COL_AP4_ID       = "AP3_ID";
-        public static final String COL_AP4_RSSI     = "AP3_RSSI";
-        public static final String COL_AP5_ID       = "AP3_ID";
-        public static final String COL_AP5_RSSI     = "AP3_RSSI";
-        public static final String COL_AP6_ID       = "AP3_ID";
-        public static final String COL_AP6_RSSI     = "AP3_RSSI";
+        public static final String COL_AP4_ID       = "AP4_ID";
+        public static final String COL_AP4_RSSI     = "AP4_RSSI";
+        public static final String COL_AP5_ID       = "AP5_ID";
+        public static final String COL_AP5_RSSI     = "AP5_RSSI";
+
+        public static final String COMMA_SEP = ", ";
+
+        public static final String SQL_CREATE_ENTRIES =
+                "CREATE TABLE IF NOT EXISTS " + RadioMapNormalized_5.TABLE_NAME + " (" +
+                        RadioMapNormalized_5._ID + " INTEGER PRIMARY KEY," +
+                        RadioMapNormalized_5.COL_ID_MEASURING + INTEGER_TYPE + COMMA_SEP +
+                        RadioMapNormalized_5.COL_BEARING + TEXT_TYPE + COMMA_SEP +
+                        RadioMapNormalized_5.COL_AP1_ID   + INTEGER_TYPE + COMMA_SEP +
+                        RadioMapNormalized_5.COL_AP1_RSSI + REAL_TYPE + COMMA_SEP +
+                        RadioMapNormalized_5.COL_AP2_ID   + INTEGER_TYPE + COMMA_SEP +
+                        RadioMapNormalized_5.COL_AP2_RSSI + REAL_TYPE + COMMA_SEP +
+                        RadioMapNormalized_5.COL_AP3_ID   + INTEGER_TYPE + COMMA_SEP +
+                        RadioMapNormalized_5.COL_AP3_RSSI + REAL_TYPE + COMMA_SEP +
+                        RadioMapNormalized_5.COL_AP4_ID   + INTEGER_TYPE + COMMA_SEP +
+                        RadioMapNormalized_5.COL_AP4_RSSI + REAL_TYPE + COMMA_SEP +
+                        RadioMapNormalized_5.COL_AP5_ID   + INTEGER_TYPE + COMMA_SEP +
+                        RadioMapNormalized_5.COL_AP5_RSSI + REAL_TYPE + ")";
+
+        public static final String SQL_DELETE_ENTRIES =
+                "DELETE FROM " + RadioMapNormalized_5.TABLE_NAME;
+
+        public static final String SQL_DROP_TABLE =
+                "DROP TABLE IF EXISTS " + RadioMapNormalized_5.TABLE_NAME;
+
+        public static final String SQL_SELECT_ALL =
+                "SELECT * FROM " + RadioMapNormalized_5.TABLE_NAME;
+    }
+
+    public static abstract class RadioMap_6 implements BaseColumns {
+        public static final String TABLE_NAME = "radiomap_6";
+
+        public static final String REAL_TYPE    = " REAL";
+        public static final String INTEGER_TYPE = " INTEGER";
+        public static final String TEXT_TYPE    = " TEXT";
+
+        public static final String COL_ID_MEASURING = "ID_MEASURING";
+        public static final String COL_BEARING      = "BEARING";
+        public static final String COL_AP1_ID       = "AP1_ID";
+        public static final String COL_AP1_RSSI     = "AP1_RSSI";
+        public static final String COL_AP2_ID       = "AP2_ID";
+        public static final String COL_AP2_RSSI     = "AP2_RSSI";
+        public static final String COL_AP3_ID       = "AP3_ID";
+        public static final String COL_AP3_RSSI     = "AP3_RSSI";
+        public static final String COL_AP4_ID       = "AP4_ID";
+        public static final String COL_AP4_RSSI     = "AP4_RSSI";
+        public static final String COL_AP5_ID       = "AP5_ID";
+        public static final String COL_AP5_RSSI     = "AP5_RSSI";
+        public static final String COL_AP6_ID       = "AP6_ID";
+        public static final String COL_AP6_RSSI     = "AP6_RSSI";
 
         public static final String COMMA_SEP = ", ";
 
@@ -268,6 +403,58 @@ public final class DbTables {
                 "SELECT * FROM " + RadioMap_6.TABLE_NAME;
     }
 
+    public static abstract class RadioMapNormalized_6 implements BaseColumns {
+        public static final String TABLE_NAME = "radiomap_normalized_6";
+
+        public static final String REAL_TYPE    = " REAL";
+        public static final String INTEGER_TYPE = " INTEGER";
+        public static final String TEXT_TYPE    = " TEXT";
+
+        public static final String COL_ID_MEASURING = "ID_MEASURING";
+        public static final String COL_BEARING      = "BEARING";
+        public static final String COL_AP1_ID       = "AP1_ID";
+        public static final String COL_AP1_RSSI     = "AP1_RSSI";
+        public static final String COL_AP2_ID       = "AP2_ID";
+        public static final String COL_AP2_RSSI     = "AP2_RSSI";
+        public static final String COL_AP3_ID       = "AP3_ID";
+        public static final String COL_AP3_RSSI     = "AP3_RSSI";
+        public static final String COL_AP4_ID       = "AP4_ID";
+        public static final String COL_AP4_RSSI     = "AP4_RSSI";
+        public static final String COL_AP5_ID       = "AP5_ID";
+        public static final String COL_AP5_RSSI     = "AP5_RSSI";
+        public static final String COL_AP6_ID       = "AP6_ID";
+        public static final String COL_AP6_RSSI     = "AP6_RSSI";
+
+        public static final String COMMA_SEP = ", ";
+
+        public static final String SQL_CREATE_ENTRIES =
+                "CREATE TABLE IF NOT EXISTS " + RadioMapNormalized_6.TABLE_NAME + " (" +
+                        RadioMapNormalized_6._ID + " INTEGER PRIMARY KEY," +
+                        RadioMapNormalized_6.COL_ID_MEASURING + INTEGER_TYPE + COMMA_SEP +
+                        RadioMapNormalized_6.COL_BEARING + TEXT_TYPE + COMMA_SEP +
+                        RadioMapNormalized_6.COL_AP1_ID   + INTEGER_TYPE + COMMA_SEP +
+                        RadioMapNormalized_6.COL_AP1_RSSI + REAL_TYPE + COMMA_SEP +
+                        RadioMapNormalized_6.COL_AP2_ID   + INTEGER_TYPE + COMMA_SEP +
+                        RadioMapNormalized_6.COL_AP2_RSSI + REAL_TYPE + COMMA_SEP +
+                        RadioMapNormalized_6.COL_AP3_ID   + INTEGER_TYPE + COMMA_SEP +
+                        RadioMapNormalized_6.COL_AP3_RSSI + REAL_TYPE + COMMA_SEP +
+                        RadioMapNormalized_6.COL_AP4_ID   + INTEGER_TYPE + COMMA_SEP +
+                        RadioMapNormalized_6.COL_AP4_RSSI + REAL_TYPE + COMMA_SEP +
+                        RadioMapNormalized_6.COL_AP5_ID   + INTEGER_TYPE + COMMA_SEP +
+                        RadioMapNormalized_6.COL_AP5_RSSI + REAL_TYPE + COMMA_SEP +
+                        RadioMapNormalized_6.COL_AP6_ID   + INTEGER_TYPE + COMMA_SEP +
+                        RadioMapNormalized_6.COL_AP6_RSSI + REAL_TYPE + ")";
+
+        public static final String SQL_DELETE_ENTRIES =
+                "DELETE FROM " + RadioMapNormalized_6.TABLE_NAME;
+
+        public static final String SQL_DROP_TABLE =
+                "DROP TABLE IF EXISTS " + RadioMapNormalized_6.TABLE_NAME;
+
+        public static final String SQL_SELECT_ALL =
+                "SELECT * FROM " + RadioMapNormalized_6.TABLE_NAME;
+    }
+
     public static abstract class MeasuringPoints implements BaseColumns {
         public static final String TABLE_NAME = "MeasuringPoints";
 
@@ -295,5 +482,32 @@ public final class DbTables {
 
         public static final String SQL_SELECT_ALL =
                 "SELECT * FROM " + MeasuringPoints.TABLE_NAME;
+    }
+
+    /**
+     * Creates a db query to check if a table contains all aps.
+     *      row: ap1_id 1, ap2_id 2, ap3_id 3
+     *      ids: 2, 1, 3
+     *      query:  SELECT COUNT(*) FROM radiomap_3
+     *              WHERE ap1_id in (2, 1, 3) AND
+     *                  ap2_id in (2, 1, 3) AND
+     *                  ap3_id in (2, 1, 3)
+     *
+     * @param ids of base stations to check.
+     * @param tableName to look in.
+     * @return sql query string.
+     */
+    public static String tableContainsAps(String tableName, ArrayList<Integer> ids) {
+        String sIds = Arrays.toString(ids.toArray(new Integer[ids.size()]));
+        String returnValues = String.format("SELECT _id FROM %s \n" +
+                "WHERE ", tableName);
+
+        for (int i = 0; i < ids.size(); i++) {
+            returnValues += String.format("AP%s_id in (%s)", i, sIds);
+            if (i != ids.size() - 1)
+                returnValues += " AND ";
+        }
+
+        return returnValues;
     }
 }

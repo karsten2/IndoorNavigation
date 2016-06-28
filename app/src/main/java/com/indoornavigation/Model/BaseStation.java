@@ -20,6 +20,7 @@ public class BaseStation implements Serializable, Comparator<BaseStation>, Compa
     private double distance;
     private double rssi;
     private String timeStamp;
+    private int dbId;
 
     private static final String TAG = "BaseStation";
 
@@ -134,6 +135,14 @@ public class BaseStation implements Serializable, Comparator<BaseStation>, Compa
 
     public void setRssi(double rssi) {
         this.rssi = rssi;
+    }
+
+    public int getDbId() {
+        return dbId;
+    }
+
+    public void setDbId(int dbId) {
+        this.dbId = dbId;
     }
 
     /**
