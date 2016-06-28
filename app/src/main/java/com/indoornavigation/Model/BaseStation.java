@@ -185,9 +185,9 @@ public class BaseStation implements Serializable, Comparator<BaseStation>, Compa
     @Override
     public int compare(BaseStation lhs, BaseStation rhs) {
         if (lhs.getRssi() > rhs.getRssi())
-            return 1;
-        if (lhs.getRssi() < rhs.getRssi())
             return -1;
+        if (lhs.getRssi() < rhs.getRssi())
+            return 1;
 
         return 0;
     }

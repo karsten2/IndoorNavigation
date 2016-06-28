@@ -13,6 +13,8 @@ import com.indoor.navigation.indoornavigation.R;
 import com.indoornavigation.Model.BaseStation;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 
 /**
  * Class to handle data from wifi scanresults.
@@ -20,11 +22,12 @@ import java.util.ArrayList;
 public class BsAdapter extends ArrayAdapter<BaseStation> {
 
     ArrayList<BaseStation> baseStations = new ArrayList<>();
-    ArrayList<BaseStation> checkedBaseStations = new ArrayList<>();
+    ArrayList<Boolean> checkState = new ArrayList<>();
 
     public BsAdapter(Context context, ArrayList<BaseStation> baseStations) {
         super(context, 0, baseStations);
         this.baseStations = baseStations;
+        checkState = new ArrayList<>(Collections.nCopies(baseStations.size(), Boolean.FALSE));
     }
 
     @Override
@@ -43,24 +46,25 @@ public class BsAdapter extends ArrayAdapter<BaseStation> {
         ctv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (ctv.isChecked()) {
-                    // uncheck item, remove from list
-                    checkedBaseStations.remove(baseStations.get(position));
-                    ctv.setChecked(false);
-                } else {
-                    // check item, add to list
-                    checkedBaseStations.add(baseStations.get(position));
-                    ctv.setChecked(true);
-                }
+                ctv.setChecked(!ctv.isChecked());
+                checkState.set(position, ctv.isChecked());
             }
         });
 
+        ctv.setChecked(checkState.get(position));
         ctv.setText(baseStation.getSsid());
 
         return convertView;
     }
 
     public ArrayList<BaseStation> getCheckedItems() {
-        return this.checkedBaseStations;
+        ArrayList<BaseStation> returnValues = new ArrayList<>();
+
+        for(int i = 0; i < checkState.size(); i++) {
+            if (checkState.get(i))
+                returnValues.add(baseStations.get(i));
+        }
+
+        return returnValues;
     }
 }

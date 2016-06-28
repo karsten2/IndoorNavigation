@@ -37,6 +37,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.indoornavigation.Helper.MapUtils;
 import com.indoornavigation.Math.Knn;
 import com.parrot.arsdk.arcontroller.ARControllerCodec;
 import com.indoornavigation.Controller.DroneController;
@@ -256,10 +257,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         mMap.setOnCameraChangeListener(new GoogleMap.OnCameraChangeListener() {
             @Override
             public void onCameraChange(CameraPosition cameraPosition) {
-                currentPosition = cameraPosition.target;
+                MapUtils.currentPosition = cameraPosition.target;
+                MapUtils.currentZoom = cameraPosition.zoom;
                 setStatus(cameraPosition.target.toString());
             }
         });
+
 
         mMap.setOnMarkerClickListener(onMarkerClickListener);
         mMap.setOnMapClickListener(onMapClickListener);
@@ -268,11 +271,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         // drawing the access points stored in the database.
         drawAccessPoints();
 
-        // setting camera position and and zoom level.
-        LatLng latLng = new LatLng(54.33852335, 13.07437386);
+        //
+
         CameraPosition cameraPosition = new CameraPosition.Builder()
-                .target(latLng).zoom(mMap.getMaxZoomLevel()).build();
-        CameraUpdate cameraUpdate = CameraUpdateFactory.newCameraPosition(cameraPosition);
+                .target(MapUtils.getStartPosition())
+                .zoom(mMap.getMaxZoomLevel())
+                .build();
+        CameraUpdate cameraUpdate = CameraUpdateFactory.newCameraPosition(
+                cameraPosition);
         mMap.moveCamera(cameraUpdate);
 
         if (ActivityCompat.checkSelfPermission(getContext(),
@@ -282,7 +288,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             return;
         }
 
-        Utils.addGroundOverlay(mMap);
+        MapUtils.addGroundOverlay(mMap);
 
         mMap.setMyLocationEnabled(true);
     }

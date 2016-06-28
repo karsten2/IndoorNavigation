@@ -8,12 +8,6 @@ import android.net.wifi.ScanResult;
 import android.os.Environment;
 import android.util.Log;
 
-import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-import com.google.android.gms.maps.model.GroundOverlayOptions;
-import com.google.android.gms.maps.model.LatLng;
-import com.indoor.navigation.indoornavigation.R;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -199,15 +193,5 @@ public abstract class Utils {
     }
 
 
-    public static void addGroundOverlay(GoogleMap mMap) {
-        LatLng position = new LatLng(54.33845083, 13.074249811);
-        GroundOverlayOptions overlay = new GroundOverlayOptions()
-                .image(BitmapDescriptorFactory.fromResource(R.drawable.floorplan))
-                .position(position, 20)
-                .bearing(346)
-                .anchor(0, 1);
 
-        mMap.addGroundOverlay(overlay);
-
-    }
 }

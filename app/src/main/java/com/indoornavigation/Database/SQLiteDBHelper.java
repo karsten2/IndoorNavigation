@@ -11,6 +11,7 @@ import android.util.Log;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.indoornavigation.Model.BaseStation;
+import com.indoornavigation.Model.CustomVector;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -317,8 +318,8 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
      * @param size number of found base stations. Indicates what db table to use.
      * @return Hashmap with coordinates and vectors.
      */
-    public HashMap<LatLng, ArrayList<Double>> getVectorTable(int size) {
-        HashMap<LatLng, ArrayList<Double>> returnValue = new HashMap<>();
+    public ArrayList<CustomVector> getVectorTable(int size) {
+        ArrayList<CustomVector> returnValue = new ArrayList<>();
 
         Cursor c = this.rawQuery("SELECT * FROM radiomap_normalized_" + size);
 
@@ -330,7 +331,7 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
                     rss.add(c.getDouble(c.getColumnIndexOrThrow(String.format("ap%s_id", i))));
                 }
 
-                returnValue.put(latLng, rss);
+                returnValue.add(new CustomVector(latLng, rss));
 
             } while (c.moveToNext());
         }

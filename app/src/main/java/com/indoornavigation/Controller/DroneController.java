@@ -17,6 +17,8 @@ import com.indoornavigation.Helper.Utils;
 import com.indoornavigation.Math.Lateration_old;
 import com.indoornavigation.Math.SRegression;
 import com.indoornavigation.Math.Statistics;
+import com.indoornavigation.Model.CustomVector;
+import com.indoornavigation.Model.CustomVectorPair;
 import com.parrot.arsdk.ARSDK;
 import com.parrot.arsdk.arcommands.ARCOMMANDS_ARDRONE3_MEDIARECORDEVENT_PICTUREEVENTCHANGED_ERROR_ENUM;
 import com.parrot.arsdk.arcommands.ARCOMMANDS_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE_ENUM;
@@ -64,10 +66,10 @@ public class DroneController {
 
     private EstimatePosition estimatePositionTask;
 
-    private HashMap<LatLng, ArrayList<Double>> vectorTable3 = new HashMap<>();
-    private HashMap<LatLng, ArrayList<Double>> vectorTable4 = new HashMap<>();
-    private HashMap<LatLng, ArrayList<Double>> vectorTable5 = new HashMap<>();
-    private HashMap<LatLng, ArrayList<Double>> vectorTable6 = new HashMap<>();
+    private ArrayList<CustomVector> vectorTable3 = new ArrayList<>();
+    private ArrayList<CustomVector> vectorTable4 = new ArrayList<>();
+    private ArrayList<CustomVector> vectorTable5 = new ArrayList<>();
+    private ArrayList<CustomVector> vectorTable6 = new ArrayList<>();
 
     private List<Listener> mListener;
 
@@ -311,7 +313,7 @@ public class DroneController {
         this.vectorTable6 = db.getVectorTable(6);
     }
 
-    private HashMap<LatLng, ArrayList<Double>> getVectorTable(int size) {
+    private ArrayList<CustomVector> getVectorTable(int size) {
         switch (size) {
             case 3: return this.vectorTable3;
             case 4: return this.vectorTable4;
@@ -319,7 +321,7 @@ public class DroneController {
             case 6: return this.vectorTable6;
         }
 
-        return new HashMap<>();
+        return new ArrayList<>();
     }
 
     public BebopDrone.Listener getBebopListener() {
@@ -507,18 +509,18 @@ public class DroneController {
         if (db.hasData(
                 DbTables.tableContainsAps(
                         "radiomap_normalized_" + foundBaseStations.size(), foundIds))) {
-            HashMap<LatLng, ArrayList<Double>> vectorTable =
+            ArrayList<CustomVector> vectorTable =
                     getVectorTable(foundBaseStations.size());
-            HashMap<LatLng, Double> vectorDifferences = new HashMap<>();
+            ArrayList<CustomVectorPair> vectorDifferences = new ArrayList<>();
 
             foundRSS = Utils.normalizeVector(foundRSS);
 
-            for (Map.Entry<LatLng, ArrayList<Double>> entry : vectorTable.entrySet()) {
+            for (CustomVector v : vectorTable) {
                 // subtract vector and get magnitude.
-                double magnitude = Utils.magnitudeVector(Utils.subtractVector(foundRSS, entry.getValue()));
+                double magnitude = Utils.magnitudeVector(Utils.subtractVector(foundRSS, v.getValues()));
 
                 // put difference in new table
-                vectorDifferences.put(entry.getKey(), magnitude);
+                vectorDifferences.add(new CustomVectorPair(v.getLatLng(), magnitude));
             }
 
             // find the N smallest values:
@@ -794,7 +796,8 @@ public class DroneController {
         protected final Boolean doInBackground(ArrayList<BaseStation>... baseStations) {
             if (baseStations != null && baseStations[0] != null) {
                 try {
-                    return getPositionFromRSS(new ArrayList<>(baseStations[0]));
+                    //return getPositionFromRSS(new ArrayList<>(baseStations[0]));
+                    return getPositionFromRadiomap(baseStations[0]);
                 } catch (Exception e) {
                     Log.e("estimate position", e.getMessage());
                 }

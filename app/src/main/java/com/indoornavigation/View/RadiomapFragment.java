@@ -12,6 +12,7 @@ import android.net.Uri;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.Handler;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
@@ -44,6 +45,7 @@ import com.indoornavigation.Adapter.WifiAdapter;
 import com.indoornavigation.Controller.DroneController;
 import com.indoornavigation.Database.DbTables;
 import com.indoornavigation.Database.SQLiteDBHelper;
+import com.indoornavigation.Helper.MapUtils;
 import com.indoornavigation.Helper.ScanResultComparator;
 import com.indoor.navigation.indoornavigation.R;
 import com.indoornavigation.Helper.Utils;
@@ -67,7 +69,6 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
     private ArrayList<ScanResult> scanResults = new ArrayList<>();
 
     private GoogleMap mMap;
-    private LatLng currentPosition;
     private ArrayList<BaseStation> baseStations = new ArrayList<>();
     private HashMap<String, LatLng> measuringPoints = new HashMap<>();
 
@@ -134,13 +135,13 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
         @Override
         public void positionChangedListener(LatLng latLng, float bearing) {
             if (tvBearing != null) {
-                tvBearing.setText(String.valueOf(bearing));
+                //tvBearing.setText(String.valueOf(bearing));
             }
         }
 
         @Override
         public void onWifiScanlistChanged(ArrayList<BaseStation> baseStations) {
-            if (write) updateStatistics(baseStations);
+            if (write && !busy) updateStatistics(new ArrayList<BaseStation>(baseStations));
         }
     };
 
@@ -255,8 +256,8 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
         builder.setPositiveButton("Okay", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        db.addMeasuringPoint(currentPosition, input.getText().toString());
-                        drawMeasuringPoint(currentPosition, input.getText().toString());
+                        db.addMeasuringPoint(MapUtils.currentPosition, input.getText().toString());
+                        drawMeasuringPoint(MapUtils.currentPosition, input.getText().toString());
                         notifyMeasurementPointsChanged();
                     }
                 }
@@ -296,7 +297,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         BaseStation bs = new BaseStation(
-                                wifiAdapter.getItem(which), currentPosition);
+                                wifiAdapter.getItem(which), MapUtils.currentPosition);
                         db.addBaseStation(bs);
                         baseStations = db.getBaseStations();
                         drawBaseStation(bs);
@@ -389,19 +390,21 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
                     double bearing = Double.valueOf(tvBearing.getText().toString());
 
                     write = true;
-                    while (progressDialog.getProgress() <= progressDialog.getMax()) {
+                    int counter = 1;
+                    while (counter <= duration) {
                         Thread.sleep(1000);
 
+                        Log.d(TAG, "in while progress: " + counter);
                         progressDialog.incrementProgressBy(1);
-
-                        if (progressDialog.getProgress() == duration) {
+                        counter ++;
+                        if (progressDialog.getProgress() == progressDialog.getMax()) {
                             progressDialog.dismiss();
                         }
                     }
                     write = false;
                     writeStatisticsToDb(mPoint, bearing);
                 } catch (Exception e) {
-                    Log.e(TAG, "");
+                    Log.e(TAG, e.getMessage());
                 }
             }
         }).start();
@@ -420,6 +423,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
+    private boolean busy = false;
     /**
      * Updating the statistics for every base station.
      *
@@ -427,11 +431,13 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
      */
     private void updateStatistics(ArrayList<BaseStation> scanResults) {
         if (scanResults.containsAll(selectedBaseStations)) {
+            busy = true;
             for (BaseStation bs : selectedBaseStations) {
                 // get the statistics from the hashmap and add the rssi value from the wifi scan.
                 selectedStatistics.get(bs.getSsid()).add(
                         (scanResults.get(scanResults.indexOf(bs))).getRssi());
             }
+            busy = false;
         }
     }
 
@@ -449,37 +455,54 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
             results.add(new BaseStation(entry.getKey(), entry.getValue().getMean()));
         }
 
+        String table = "radiomap_" + results.size();
+        String tableNormalized = "radiomap_normalized_" + results.size();
+
         Collections.sort(results);
 
-        String query = String.format("INSERT INTO radiomap_%s values (\n", results.size());
-        String queryNormalized = String.format("INSERT INTO radiomap_normalized_%s " +
-                "values (\n", results.size());
+        // QUERY HEADER
+        String query = "INSERT INTO radiomap_" + results.size();
+        String queryNormalized = "INSERT INTO radiomap_normalized_" + results.size();
 
-        query += String.format(
-                "(SELECT _ID FROM %s WHERE NAME = %s), \n" +
+        // COLUMNS
+        String columns = " id_measuring, bearing";
+        for (int i = 1; i <= results.size(); i++) {
+                columns += String.format(", ap%s_id, ap%1$s_rssi", i);
+        }
+
+        query += "(" + columns +") VALUES (";
+        queryNormalized += "(" + columns + ") VALUES (";
+
+        String temp = String.format(
+                "(SELECT _ID FROM %s WHERE NAME = '%s'), \n" +
                 "%s, \n",
                 DbTables.MeasuringPoints.TABLE_NAME,
                 measuringPoint,
                 bearing);
 
-        queryNormalized += query;
+        query += temp;
+        queryNormalized += temp;
 
         ArrayList<BaseStation> normalized = normalizeRSS(results);
 
         for (BaseStation bs : normalized) {
             queryNormalized += String.format(
-                    "(SELECT _ID FROM radiomap WHERE SSID = '%s'), \n" +
-                            "%s",
+                    "(SELECT _ID FROM radiomap WHERE SSID = '%s'), %s",
                     bs.getSsid(),
                     bs.getRssi());
+            // add comma if not last value
+            if (!bs.equals(normalized.get(normalized.size() -1)))
+                queryNormalized += ", \n";
         }
 
         for (BaseStation bs : results) {
             query += String.format(
-                    "(SELECT _ID FROM radiomap WHERE SSID = '%s'), \n" +
-                    "%s",
+                    "(SELECT _ID FROM radiomap WHERE SSID = '%s'), %s",
                     bs.getSsid(),
                     bs.getRssi());
+            // add comma if not last value
+            if (!bs.equals(results.get(results.size() -1)))
+                query += ", \n";
         }
 
         query += ")";
@@ -503,7 +526,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
         ArrayList<BaseStation> returnValues = new ArrayList<>();
 
         if (baseStations.size() > 0) {
-            double first = returnValues.get(0).getRssi();
+            double first = baseStations.get(0).getRssi();
 
             for (BaseStation bs : baseStations) {
                 BaseStation newBs = new BaseStation(bs.getSsid(), bs.getRssi() - first);
@@ -598,14 +621,16 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
         mMap.setOnCameraChangeListener(new GoogleMap.OnCameraChangeListener() {
             @Override
             public void onCameraChange(CameraPosition cameraPosition) {
-                currentPosition = cameraPosition.target;
+                MapUtils.currentPosition = cameraPosition.target;
+                MapUtils.currentZoom = cameraPosition.zoom;
             }
         });
 
         // setting camera position and and zoom level.
-        LatLng latLng = new LatLng(54.33901533, 13.07454586);
         CameraPosition cameraPosition = new CameraPosition.Builder()
-                .target(latLng).zoom(mMap.getMaxZoomLevel()).build();
+                .target(MapUtils.getStartPosition())
+                .zoom(MapUtils.currentZoom)
+                .build();
         CameraUpdate cameraUpdate = CameraUpdateFactory.newCameraPosition(cameraPosition);
         mMap.moveCamera(cameraUpdate);
 
@@ -620,7 +645,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
 
         mMap.setMyLocationEnabled(true);
 
-        Utils.addGroundOverlay(mMap);
+        MapUtils.addGroundOverlay(mMap);
 
         // get basestations from database
         this.baseStations = db.getBaseStations();
