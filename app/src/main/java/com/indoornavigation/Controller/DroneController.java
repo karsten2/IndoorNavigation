@@ -485,6 +485,7 @@ public class DroneController {
                 BaseStation temp = dbBaseStations.get(dbBaseStations.indexOf(bs));
 
                 for (Statistics stat : apStatistics) {
+                    // find the matching statistics for each base station and add the values.
                     if (stat.getName().equals(bs.getSsid())) {
                         found = true;
                         stat.add(bs.getRssi());
@@ -497,6 +498,7 @@ public class DroneController {
                 }
 
                 if (!found) {
+                    // create statistics if not exist.
                     Statistics statistics = new Statistics(statisticsWindowSize, bs.getSsid());
                     statistics.add(bs.getRssi());
                     apStatistics.add(statistics);
@@ -506,31 +508,62 @@ public class DroneController {
         }
 
         // Get ids from the database
-        if (db.hasData(
-                DbTables.tableContainsAps(
-                        "radiomap_normalized_" + foundBaseStations.size(), foundIds))) {
-            ArrayList<CustomVector> vectorTable =
-                    getVectorTable(foundBaseStations.size());
-            ArrayList<CustomVectorPair> vectorDifferences = new ArrayList<>();
+        if (foundBaseStations.size() >= 3) {
+            if (db.hasData(
+                    DbTables.tableContainsAps(
+                            "radiomap_normalized_" + foundBaseStations.size(), foundIds))) {
+                ArrayList<CustomVector> vectorTable =
+                        getVectorTable(foundBaseStations.size());
+                ArrayList<CustomVectorPair> vectorDifferences = new ArrayList<>();
 
-            foundRSS = Utils.normalizeVector(foundRSS);
+                foundRSS = Utils.normalizeVector(foundRSS);
 
-            for (CustomVector v : vectorTable) {
-                // subtract vector and get magnitude.
-                double magnitude = Utils.magnitudeVector(Utils.subtractVector(foundRSS, v.getValues()));
+                for (CustomVector v : vectorTable) {
+                    // subtract vector and get magnitude.
+                    double magnitude = Utils.magnitudeVector(Utils.subtractVector(foundRSS, v.getValues()));
 
-                // put difference in new table
-                vectorDifferences.add(new CustomVectorPair(v.getLatLng(), magnitude));
+                    // put difference in new table
+                    vectorDifferences.add(new CustomVectorPair(v.getLatLng(), magnitude));
+                }
+
+                // find the N smallest values:
+                int N = 1;
+                Collections.sort(vectorDifferences);
+                LatLng newPosition = averageLatLng(vectorDifferences.subList(0, N - 1));
+
+                if (!newPosition.equals(new LatLng(0, 0)) && !newPosition.equals(currentPosition)) {
+
+                    droneStatisticsLat.add(newPosition.latitude);
+                    droneStatisticsLng.add(newPosition.longitude);
+                    currentPosition = new LatLng(droneStatisticsLat.getMean(), droneStatisticsLng.getMean());
+                    return true;
+                }
             }
-
-            // find the N smallest values:
-            //ArrayList<Double> sortedDifferences = vectorDifferences.values();
-            //Collections.sort(sortedDifferences);
-
         }
 
-
         return false;
+    }
+
+    /**
+     * Function to get the average latlng coordinates out of n latlng values.
+     * Used when knn returns k nearest neighbors.
+     *      lat values are summed up
+     *      lng values are summed up
+     *      divided by number of coordinates in vectorPair array.
+     *
+     * @param vectorPairs Array with coordinates.
+     * @return averaged latlng.
+     */
+    private LatLng averageLatLng(List<CustomVectorPair> vectorPairs) {
+        double lat = 0;
+        double lng = 0;
+        int n = vectorPairs.size();
+        for (CustomVectorPair v : vectorPairs) {
+            lat += v.getLatLng().latitude;
+            lng += v.getLatLng().longitude;
+        }
+
+        return new LatLng(lat / n, lng / n);
     }
 
     /**

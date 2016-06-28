@@ -1,6 +1,7 @@
 package com.indoornavigation.Database;
 
 import android.provider.BaseColumns;
+import android.text.TextUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -498,13 +499,13 @@ public final class DbTables {
      * @return sql query string.
      */
     public static String tableContainsAps(String tableName, ArrayList<Integer> ids) {
-        String sIds = Arrays.toString(ids.toArray(new Integer[ids.size()]));
+        String sIds = TextUtils.join(", ", ids);
         String returnValues = String.format("SELECT _id FROM %s \n" +
                 "WHERE ", tableName);
 
-        for (int i = 0; i < ids.size(); i++) {
+        for (int i = 1; i <= ids.size(); i++) {
             returnValues += String.format("AP%s_id in (%s)", i, sIds);
-            if (i != ids.size() - 1)
+            if (i != ids.size())
                 returnValues += " AND ";
         }
 

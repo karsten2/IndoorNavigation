@@ -3,11 +3,13 @@ package com.indoornavigation.View;
 import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.net.Uri;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
@@ -458,58 +460,47 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
         String table = "radiomap_" + results.size();
         String tableNormalized = "radiomap_normalized_" + results.size();
 
+        ContentValues values = new ContentValues();
+        ContentValues valuesNormalized = new ContentValues();
+
+       // values.put(DbTables.RadioMap.COL_SSID, this.ssid);
+       // values.put(DbTables.RadioMap.COL_BSSID, this.bssid);
+       // values.put(DbTables.RadioMap.COL_LAT, this.latLng.latitude);
+       // values.put(DbTables.RadioMap.COL_LNG, this.latLng.longitude);
+
         Collections.sort(results);
 
-        // QUERY HEADER
-        String query = "INSERT INTO radiomap_" + results.size();
-        String queryNormalized = "INSERT INTO radiomap_normalized_" + results.size();
-
-        // COLUMNS
-        String columns = " id_measuring, bearing";
-        for (int i = 1; i <= results.size(); i++) {
-                columns += String.format(", ap%s_id, ap%1$s_rssi", i);
+        Cursor c = db.rawQuery(String.format("SELECT _ID FROM %s WHERE NAME = '%s'",
+                DbTables.MeasuringPoints.TABLE_NAME, measuringPoint));
+        if (c != null && c.moveToFirst()) {
+            values.put("id_measuring", c.getInt(c.getColumnIndexOrThrow("_id")));
+            valuesNormalized.put("id_measuring", c.getInt(c.getColumnIndexOrThrow("_id")));
         }
 
-        query += "(" + columns +") VALUES (";
-        queryNormalized += "(" + columns + ") VALUES (";
-
-        String temp = String.format(
-                "(SELECT _ID FROM %s WHERE NAME = '%s'), \n" +
-                "%s, \n",
-                DbTables.MeasuringPoints.TABLE_NAME,
-                measuringPoint,
-                bearing);
-
-        query += temp;
-        queryNormalized += temp;
+        values.put("bearing", bearing);
+        valuesNormalized.put("bearing", bearing);
 
         ArrayList<BaseStation> normalized = normalizeRSS(results);
 
-        for (BaseStation bs : normalized) {
-            queryNormalized += String.format(
-                    "(SELECT _ID FROM radiomap WHERE SSID = '%s'), %s",
-                    bs.getSsid(),
-                    bs.getRssi());
-            // add comma if not last value
-            if (!bs.equals(normalized.get(normalized.size() -1)))
-                queryNormalized += ", \n";
+        for (int i = 1; i <= results.size(); i++) {
+            String currentAp = String.format("ap%s_id", i);
+            String currentRss = String.format("ap%s_rssi", i);
+
+            Cursor c2 = db.rawQuery(String.format("SELECT _ID FROM radiomap WHERE SSID = '%s'",
+                    results.get(i - 1).getSsid()));
+            int currentId = -1;
+            if (c2 != null && c2.moveToFirst())
+                currentId = c2.getInt(c2.getColumnIndexOrThrow("_id"));
+
+            values.put(currentAp, currentId);
+            valuesNormalized.put(currentAp, currentId);
+
+            values.put(currentRss, results.get(i - 1).getRssi());
+            valuesNormalized.put(currentRss, normalized.get(i - 1).getRssi());
         }
 
-        for (BaseStation bs : results) {
-            query += String.format(
-                    "(SELECT _ID FROM radiomap WHERE SSID = '%s'), %s",
-                    bs.getSsid(),
-                    bs.getRssi());
-            // add comma if not last value
-            if (!bs.equals(results.get(results.size() -1)))
-                query += ", \n";
-        }
-
-        query += ")";
-        queryNormalized += ")";
-
-        db.rawQuery(query);
-        db.rawQuery(queryNormalized);
+        db.sqlInsert(table, null, values);
+        db.sqlInsert(tableNormalized, null, valuesNormalized);
     }
 
     /**
