@@ -11,7 +11,8 @@ import com.indoor.navigation.indoornavigation.R;
  */
 public class MapUtils {
 
-    public static LatLng startPosition = new LatLng(54.33852335, 13.07437386);
+    //public static LatLng startPosition = new LatLng(54.33845259, 13.074251823);
+    public static LatLng startPosition = new LatLng(54.338455139, 13.07425316423);
     public static LatLng currentPosition = new LatLng(-1, -1);
     public static float currentZoom = 0;
 
@@ -19,7 +20,7 @@ public class MapUtils {
         LatLng position = new LatLng(54.33845083, 13.074249811);
         GroundOverlayOptions overlay = new GroundOverlayOptions()
                 .image(BitmapDescriptorFactory.fromResource(R.drawable.floorplan))
-                .position(position, 20)
+                .position(position, 18)
                 .bearing(346)
                 .anchor(0, 1);
 

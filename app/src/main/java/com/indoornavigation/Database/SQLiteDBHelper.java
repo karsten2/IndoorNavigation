@@ -321,19 +321,22 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
     public ArrayList<CustomVector> getVectorTable(int size) {
         ArrayList<CustomVector> returnValue = new ArrayList<>();
 
-        Cursor c = this.rawQuery("SELECT * FROM radiomap_normalized_" + size);
+        try {
+            Cursor c = this.rawQuery("SELECT * FROM radiomap_normalized_" + size);
 
-        if (c != null && c.moveToFirst()) {
-            do {
-                LatLng latLng = getLatLng(c.getInt(c.getColumnIndexOrThrow("ID_MEASURING")));
-                ArrayList<Double> rss = new ArrayList<>();
-                for (int i = 1; i <= size; i++) {
-                    rss.add(c.getDouble(c.getColumnIndexOrThrow(String.format("ap%s_id", i))));
-                }
+            if (c != null && c.moveToFirst()) {
+                do {
+                    LatLng latLng = getLatLng(c.getInt(c.getColumnIndexOrThrow("ID_MEASURING")));
+                    ArrayList<Double> rss = new ArrayList<>();
+                    for (int i = 1; i <= size; i++) {
+                        rss.add(c.getDouble(c.getColumnIndexOrThrow(String.format("ap%s_id", i))));
+                    }
+                    returnValue.add(new CustomVector(latLng, rss));
 
-                returnValue.add(new CustomVector(latLng, rss));
-
-            } while (c.moveToNext());
+                } while (c.moveToNext());
+            }
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, e.getMessage());
         }
 
         return returnValue;

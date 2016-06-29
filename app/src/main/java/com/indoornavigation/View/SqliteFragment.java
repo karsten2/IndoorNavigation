@@ -169,43 +169,6 @@ public class SqliteFragment extends Fragment {
 
     private ArrayList<ScanResult> savedResults = new ArrayList<>();
 
-    private void dialog() {
-
-        // start wifi service
-        Utils.startService(WifiScanner.class, getActivity());
-        wifiAdapter = new WifiAdapter(getActivity(), scanResults);
-
-        final AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setTitle("Select Access Point");
-
-        builder.setPositiveButton("Okay",
-                new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        Utils.Serialize(getContext(), "file", savedResults);
-                    }
-                });
-
-        builder.setAdapter(wifiAdapter,
-                new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        ScanResult scanResult = wifiAdapter.getItem(which);
-                        savedResults.add(scanResult);
-                    }
-                });
-
-        builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-            @Override
-            public void onDismiss(DialogInterface dialog) {
-                Utils.stopService(WifiScanner.class, getActivity());
-            }
-        });
-
-        builder.create().show();
-    }
-
-
     BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {

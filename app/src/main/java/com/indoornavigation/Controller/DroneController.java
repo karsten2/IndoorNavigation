@@ -15,6 +15,7 @@ import com.google.common.collect.Ordering;
 import com.google.maps.android.SphericalUtil;
 import com.indoornavigation.Helper.Utils;
 import com.indoornavigation.Math.Lateration_old;
+import com.indoornavigation.Math.MathUtils;
 import com.indoornavigation.Math.SRegression;
 import com.indoornavigation.Math.Statistics;
 import com.indoornavigation.Model.CustomVector;
@@ -516,11 +517,12 @@ public class DroneController {
                         getVectorTable(foundBaseStations.size());
                 ArrayList<CustomVectorPair> vectorDifferences = new ArrayList<>();
 
-                foundRSS = Utils.normalizeVector(foundRSS);
+                foundRSS = MathUtils.normalizeVector(foundRSS);
 
                 for (CustomVector v : vectorTable) {
                     // subtract vector and get magnitude.
-                    double magnitude = Utils.magnitudeVector(Utils.subtractVector(foundRSS, v.getValues()));
+                    double magnitude = MathUtils.magnitudeVector(
+                            MathUtils.subtractVector(foundRSS, v.getValues()));
 
                     // put difference in new table
                     vectorDifferences.add(new CustomVectorPair(v.getLatLng(), magnitude));
@@ -535,7 +537,8 @@ public class DroneController {
 
                     droneStatisticsLat.add(newPosition.latitude);
                     droneStatisticsLng.add(newPosition.longitude);
-                    currentPosition = new LatLng(droneStatisticsLat.getMean(), droneStatisticsLng.getMean());
+                    currentPosition = new LatLng(
+                            droneStatisticsLat.getMean(), droneStatisticsLng.getMean());
                     return true;
                 }
             }

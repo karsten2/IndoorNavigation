@@ -1,5 +1,6 @@
 package com.indoornavigation.Controller;
 
+import com.indoornavigation.Helper.Utils;
 import com.indoornavigation.View.DroneFragment;
 import com.indoornavigation.View.MapFragment;
 import com.indoornavigation.View.RssiFragment;
@@ -128,6 +129,8 @@ public class MainActivity extends AppCompatActivity
                 if (actionBar != null) actionBar.setTitle(R.string.title_fragment_radiomap);
             } else if (id == R.id.nav_data) {
                 fragment = RssiFragment.class.newInstance();
+            } else if (id == R.id.nav_export) {
+                Utils.copyDbToExternal(this, "radiomap.db");
             }
 
             FragmentManager fragmentManager = getSupportFragmentManager();

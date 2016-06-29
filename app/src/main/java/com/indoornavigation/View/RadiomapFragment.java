@@ -25,6 +25,7 @@ import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
@@ -137,7 +138,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
         @Override
         public void positionChangedListener(LatLng latLng, float bearing) {
             if (tvBearing != null) {
-                //tvBearing.setText(String.valueOf(bearing));
+                tvBearing.setText(String.valueOf(bearing));
             }
         }
 
@@ -344,6 +345,19 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
         final ListView listView = (ListView) dialogView.findViewById(R.id.listView2);
         if (listView != null) {
             listView.setAdapter(bsAdapter);
+            listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    String bsSSId = ((TextView) view.findViewById(R.id.txtRadiomapDialog))
+                            .getText().toString();
+                    for (BaseStation bs : baseStations) {
+                        if (bs.getSsid().equals(bsSSId)) {
+                            bsAdapter.toggleSelection(bs);
+                            break;
+                        }
+                    }
+                }
+            });
         }
 
         final TextView tvDuration = (TextView) dialogView.findViewById(R.id.txtLength);

@@ -6,6 +6,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
 import android.widget.CheckedTextView;
 import android.widget.TextView;
 
@@ -21,50 +22,48 @@ import java.util.Collections;
  */
 public class BsAdapter extends ArrayAdapter<BaseStation> {
 
-    ArrayList<BaseStation> baseStations = new ArrayList<>();
-    ArrayList<Boolean> checkState = new ArrayList<>();
+    private ArrayList<BaseStation> selectedBaseStations = new ArrayList<>();
+
 
     public BsAdapter(Context context, ArrayList<BaseStation> baseStations) {
         super(context, 0, baseStations);
-        this.baseStations = baseStations;
-        checkState = new ArrayList<>(Collections.nCopies(baseStations.size(), Boolean.FALSE));
     }
 
     @Override
     public View getView(final int position, View convertView, ViewGroup parent) {
         // Get the data item for this position
-        final BaseStation baseStation = getItem(position);
+        BaseStation baseStation = getItem(position);
         // Check if an existing view is being reused, otherwise inflate the view
         if (convertView == null) {
             convertView = LayoutInflater.from(getContext()).inflate(
-                    android.R.layout.simple_list_item_multiple_choice,
+                    //android.R.layout.simple_list_item_multiple_choice,
+                    R.layout.dialog_radiomap_item,
                     parent, false);
         }
 
-        final CheckedTextView ctv = (CheckedTextView) convertView.findViewById(
-                android.R.id.text1);
-        ctv.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ctv.setChecked(!ctv.isChecked());
-                checkState.set(position, ctv.isChecked());
-            }
-        });
+        TextView tv = (TextView) convertView.findViewById(R.id.txtRadiomapDialog);
+        CheckBox cBox = (CheckBox) convertView.findViewById(R.id.checkBox);
 
-        ctv.setChecked(checkState.get(position));
-        ctv.setText(baseStation.getSsid());
+        if (this.selectedBaseStations.contains(baseStation))
+            cBox.setChecked(true);
+        else
+            cBox.setChecked(false);
+
+        tv.setText(baseStation.getSsid());
 
         return convertView;
     }
 
+    public void toggleSelection(BaseStation bs) {
+        if (this.selectedBaseStations.contains(bs))
+            this.selectedBaseStations.remove(bs);
+        else
+            this.selectedBaseStations.add(bs);
+
+        this.notifyDataSetChanged();
+    }
+
     public ArrayList<BaseStation> getCheckedItems() {
-        ArrayList<BaseStation> returnValues = new ArrayList<>();
-
-        for(int i = 0; i < checkState.size(); i++) {
-            if (checkState.get(i))
-                returnValues.add(baseStations.get(i));
-        }
-
-        return returnValues;
+        return this.selectedBaseStations;
     }
 }

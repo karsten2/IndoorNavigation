@@ -16,6 +16,11 @@
             android:icon="@drawable/ic_show_chart_black_24dp"
             android:title="@string/title_activity_data"/>
 
+        <item
+            android:id="@+id/nav_export"
+            android:icon="@drawable/ic_file_upload_black_24dp"
+            android:title="@string/export_db"/>
+
         <!--<item
             android:id="@+id/nav_wifi"
             android:icon="@drawable/ic_signal_wifi_4_bar_black_24dp"

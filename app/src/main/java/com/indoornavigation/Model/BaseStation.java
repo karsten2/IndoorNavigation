@@ -2,6 +2,7 @@ package com.indoornavigation.Model;
 
 import android.content.ContentValues;
 import android.net.wifi.ScanResult;
+import android.support.annotation.NonNull;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.indoornavigation.Database.DbTables;
@@ -178,6 +179,10 @@ public class BaseStation implements Serializable, Comparator<BaseStation>, Compa
             if (this.ssid.equals(toCompare.getSsid()))
                 return true;
         }
+        if (o instanceof String) {
+            if (this.ssid.equals(o.toString()))
+                return true;
+        }
 
         return false;
     }
@@ -193,7 +198,7 @@ public class BaseStation implements Serializable, Comparator<BaseStation>, Compa
     }
 
     @Override
-    public int compareTo(BaseStation another) {
+    public int compareTo(@NonNull BaseStation another) {
         return compare(this, another);
     }
 }

@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.net.wifi.ScanResult;
 import android.os.Environment;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -14,65 +15,19 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.nio.channels.FileChannel;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 
 /**
- * Write stuff to phones storage.
+ * Class with helper functions.
  */
 public abstract class Utils {
 
-    private static String path = Environment
-            .getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).toString();
-    private static String filename = "data.dat";
-
-    public static void Serialize(Context context, String fileName, ArrayList<ScanResult> object) {
-        try {
-
-            File file = new File(path + filename);
-            if (file.exists())
-                file.delete();
-            file.createNewFile();
-
-            FileOutputStream fos = new FileOutputStream(file);
-            ObjectOutputStream os = new ObjectOutputStream(fos);
-            os.writeObject(object);
-            os.close();
-            fos.close();
-            Log.d("Global Serialize", "Serialized");
-        } catch (IOException e) {
-            Log.e("Global Serialization", e.toString());
-        }
-    }
-
-    public static ArrayList<ScanResult> Deserialize (Context context, String fileName) {
-        try {
-            //File file = context.getFileStreamPath(fileName);
-            File file = new File(path + filename);
-            if (file == null || !file.exists()) {
-                Log.d("Global Serialization", "File not found");
-            } else {
-                //FileInputStream fis = context.openFileInput(fileName);
-                FileInputStream fis = new FileInputStream(file);
-                ObjectInputStream is = new ObjectInputStream(fis);
-                ArrayList<ScanResult> retObj = (ArrayList) is.readObject();
-                is.close();
-                Log.d("Global Deserialize", "Deserialized");
-                return retObj;
-
-            }
-        } catch (IOException e) {
-            Log.e("Global Deserialization", e.getMessage());
-        } catch (ClassNotFoundException e) {
-            Log.e("Global Deserialization", e.getMessage());
-        }
-
-        return new ArrayList<>();
-    }
-
     /**
      * Function to start a service.
+     *
      * @param cls The service's class.
      */
     public static void startService(Class<?> cls, Activity activity) {
@@ -84,6 +39,7 @@ public abstract class Utils {
 
     /**
      * Function to stop a service.
+     *
      * @param cls The service's class.
      */
     public static void stopService(Class<?> cls, Activity activity) {
@@ -95,6 +51,7 @@ public abstract class Utils {
 
     /**
      * Function to check if a Service is running.
+     *
      * @param serviceClass The service's class.
      * @return true if running, else false.
      */
@@ -112,12 +69,12 @@ public abstract class Utils {
 
     /**
      * Return date in specified format.
+     *
      * @param milliSeconds Date in milliseconds
-     * @param dateFormat Date format
+     * @param dateFormat   Date format
      * @return String representing date in specified format
      */
-    public static String getDate(long milliSeconds, String dateFormat)
-    {
+    public static String getDate(long milliSeconds, String dateFormat) {
         // Create a DateFormatter object for displaying date in specified format.
         SimpleDateFormat formatter = new SimpleDateFormat(dateFormat);
 
@@ -140,58 +97,37 @@ public abstract class Utils {
         return Math.pow(10.0, exp);
     }
 
-    public static ArrayList<Double> normalizeVector(ArrayList<Double> vector) {
-        ArrayList<Double> returnValue = new ArrayList<>();
-
-        if (vector.size() > 0) {
-            Double first = vector.get(0);
-            for (Double d : vector) {
-                returnValue.add(d - first);
-            }
-        }
-
-        return returnValue;
-    }
-
     /**
-     * Subtract to vectors.
-     * The size of v1 and v2 must be equal.
+     * Create a backup of the database.
      *
-     * @param v1 ArrayList with double values.
-     * @param v2 ArrayList with double values.
-     * @return new vector form v1 and v2.
+     * @param context who calls the function.
+     * @param dbName Name of the database to backup. (If empty, radiomap.db is used).
      */
-    public static ArrayList<Double> subtractVector(ArrayList<Double> v1, ArrayList<Double> v2) {
-        ArrayList<Double> returnValue  = new ArrayList<>();
+    public static void copyDbToExternal(Context context, String dbName) {
+        try {
+            if (dbName.equals(""))
+                dbName = "radiomap.db";
 
-        if (v1.size() == v2.size()) {
-            for (int i = 0; i < v1.size(); i ++) {
-                returnValue.add(v1.get(i) - v2.get(i));
+            File sd = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            File data = Environment.getDataDirectory();
+
+            if (sd.canWrite()) {
+                String currentDBPath = "//data//" + context.getApplicationContext().getPackageName() + "//databases//"
+                        + dbName;
+                File currentDB = new File(data, currentDBPath);
+                File backupDB = new File(sd, dbName);
+
+                FileChannel src = new FileInputStream(currentDB).getChannel();
+                FileChannel dst = new FileOutputStream(backupDB).getChannel();
+                dst.transferFrom(src, 0, src.size());
+                src.close();
+                dst.close();
+
+                Toast.makeText(context, "Export successful!", Toast.LENGTH_LONG).show();
             }
+        } catch (Exception e) {
+            Log.e("Utils", e.getMessage());
+            Toast.makeText(context, "Exporting database failed!", Toast.LENGTH_LONG).show();
         }
-
-        return returnValue;
     }
-
-    /**
-     * Get the vectors magnitude.
-     *      v {1, 2, 3}
-     *      |v| 3.74...
-     *
-     * @param v values of vector as arraylist.
-     * @return magnitude
-     */
-    public static double magnitudeVector(ArrayList<Double> v) {
-
-        double vectorContent = 0;
-
-        for (Double d : v) {
-            vectorContent += Math.pow(d, 2);
-        }
-
-        return Math.sqrt(vectorContent);
-    }
-
-
-
 }
