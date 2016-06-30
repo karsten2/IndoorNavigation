@@ -14,7 +14,6 @@ import android.net.Uri;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import android.os.Debug;
 import android.os.Handler;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
@@ -51,12 +50,10 @@ import com.indoornavigation.Database.SQLiteDBHelper;
 import com.indoornavigation.Helper.MapUtils;
 import com.indoornavigation.Helper.ScanResultComparator;
 import com.indoor.navigation.indoornavigation.R;
-import com.indoornavigation.Helper.Utils;
 import com.indoornavigation.Math.Statistics;
 import com.indoornavigation.Model.BaseStation;
+import com.indoornavigation.Model.MeasuringPoint;
 import com.parrot.arsdk.arcontroller.ARControllerCodec;
-
-import org.apache.commons.math3.geometry.Vector;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -73,7 +70,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
 
     private GoogleMap mMap;
     private ArrayList<BaseStation> baseStations = new ArrayList<>();
-    private HashMap<String, LatLng> measuringPoints = new HashMap<>();
+    private ArrayList<MeasuringPoint> measuringPoints = new ArrayList<>();
 
     private HashMap<String, Statistics> selectedStatistics = new HashMap<>();
     private LatLng selectedMeasuringPoint;
@@ -82,13 +79,12 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
 
     private TextView tvBearing;
     private Spinner spinner;
-
+    private BsAdapter bsAdapter;
     private SQLiteDBHelper db;
 
     private static final String TAG = "RadiomapFragment";
 
-    public RadiomapFragment() {
-    }
+    public RadiomapFragment() { }
 
     private Handler handler = new Handler();
     private Runnable runnable = new Runnable() {
@@ -124,23 +120,23 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
 
     private DroneController.Listener droneListener = new DroneController.Listener() {
         @Override
-        public void checkPointReachedListener(Marker marker) {
-        }
+        public void checkPointReachedListener(Marker marker) { }
 
         @Override
-        public void videoReceivedListener(ARControllerCodec codec) {
-        }
+        public void videoReceivedListener(ARControllerCodec codec) { }
 
         @Override
-        public void onDroneConnectionChangedListener(boolean connected) {
-        }
+        public void onDroneConnectionChangedListener(boolean connected) { }
 
         @Override
-        public void positionChangedListener(LatLng latLng, float bearing) {
+        public void onBearingChangedListener(float bearing) {
             if (tvBearing != null) {
                 tvBearing.setText(String.valueOf(bearing));
             }
         }
+
+        @Override
+        public void positionChangedListener(LatLng latLng) { }
 
         @Override
         public void onWifiScanlistChanged(ArrayList<BaseStation> baseStations) {
@@ -333,15 +329,22 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
 
         spinner = (Spinner) dialogView.findViewById(R.id.spinner);
         if (spinner != null) {
-            ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(
+            Collections.sort(measuringPoints);
+            ArrayList<String> adapterList = new ArrayList<>();
+            for (MeasuringPoint mp : measuringPoints) {
+                adapterList.add(mp.toString());
+            }
+
+            ArrayAdapter spinnerAdapter = new ArrayAdapter<>(
                     getContext(), android.R.layout.simple_spinner_item,
                     android.R.id.text1,
-                    new ArrayList<>(measuringPoints.keySet()));
+                    adapterList);
             spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
             spinner.setAdapter(spinnerAdapter);
         }
 
-        final BsAdapter bsAdapter = new BsAdapter(getContext(), baseStations);
+        if (bsAdapter == null)
+            bsAdapter = new BsAdapter(getContext(), baseStations);
         final ListView listView = (ListView) dialogView.findViewById(R.id.listView2);
         if (listView != null) {
             listView.setAdapter(bsAdapter);
@@ -365,11 +368,14 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
         builder.setPositiveButton("Start", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                Log.d("listview", String.valueOf(bsAdapter.getCheckedItems().size()));
                 if (tvDuration != null && spinner != null) {
                     selectedBaseStations = bsAdapter.getCheckedItems();
-                    selectedMeasuringPoint = measuringPoints.get(
-                            spinner.getSelectedItem().toString());
+                    for (MeasuringPoint mp : measuringPoints) {
+                        if (mp.getName().equals(spinner.getSelectedItem().toString())) {
+                            selectedMeasuringPoint = mp.getLatLng();
+                            break;
+                        }
+                    }
 
                     launchBarDialog(Integer.valueOf(tvDuration.getText().toString()));
                 }
@@ -409,8 +415,6 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
                     int counter = 1;
                     while (counter <= duration) {
                         Thread.sleep(1000);
-
-                        Log.d(TAG, "in while progress: " + counter);
                         progressDialog.incrementProgressBy(1);
                         counter ++;
                         if (progressDialog.getProgress() == progressDialog.getMax()) {
@@ -471,28 +475,23 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
             results.add(new BaseStation(entry.getKey(), entry.getValue().getMean()));
         }
 
-        String table = "radiomap_" + results.size();
-        String tableNormalized = "radiomap_normalized_" + results.size();
+        for (BaseStation bs : results) {
+            if (baseStations.contains(bs)) {
+                bs.setDbId(baseStations.get(baseStations.indexOf(bs)).getDbId());
+            }
+        }
+
+        // sort after db id.
+        Collections.sort(results);
 
         ContentValues values = new ContentValues();
-        ContentValues valuesNormalized = new ContentValues();
-
-       // values.put(DbTables.RadioMap.COL_SSID, this.ssid);
-       // values.put(DbTables.RadioMap.COL_BSSID, this.bssid);
-       // values.put(DbTables.RadioMap.COL_LAT, this.latLng.latitude);
-       // values.put(DbTables.RadioMap.COL_LNG, this.latLng.longitude);
-
-        Collections.sort(results);
 
         Cursor c = db.rawQuery(String.format("SELECT _ID FROM %s WHERE NAME = '%s'",
                 DbTables.MeasuringPoints.TABLE_NAME, measuringPoint));
         if (c != null && c.moveToFirst()) {
             values.put("id_measuring", c.getInt(c.getColumnIndexOrThrow("_id")));
-            valuesNormalized.put("id_measuring", c.getInt(c.getColumnIndexOrThrow("_id")));
         }
-
-        values.put("bearing", bearing);
-        valuesNormalized.put("bearing", bearing);
+        values.put("bearing", bearing + 180);
 
         ArrayList<BaseStation> normalized = normalizeRSS(results);
 
@@ -507,14 +506,18 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
                 currentId = c2.getInt(c2.getColumnIndexOrThrow("_id"));
 
             values.put(currentAp, currentId);
-            valuesNormalized.put(currentAp, currentId);
+            values.put(currentRss, normalized.get(i - 1).getRssi());
 
-            values.put(currentRss, results.get(i - 1).getRssi());
-            valuesNormalized.put(currentRss, normalized.get(i - 1).getRssi());
+            switch (i) {
+                case 3:
+                case 4:
+                case 5:
+                case 6:
+                    db.sqlInsert("radiomap_" + i, null, values);
+                    Log.d(TAG, "Values: \n" + values.toString());
+                    break;
+            }
         }
-
-        db.sqlInsert(table, null, values);
-        db.sqlInsert(tableNormalized, null, valuesNormalized);
     }
 
     /**
@@ -569,17 +572,17 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
      * Draw all measuring points.
      */
     private void drawMeasuringPoint() {
-        for (Map.Entry<String, LatLng> entry : measuringPoints.entrySet()) {
-            drawMeasuringPoint(entry);
+        for (MeasuringPoint mp : measuringPoints) {
+            drawMeasuringPoint(mp);
         }
     }
 
     /**
      * Draw a single measuring point.
-     * @param measuringPoint The point to draw.
+     * @param mp The point to draw.
      */
-    private void drawMeasuringPoint(Map.Entry<String, LatLng> measuringPoint) {
-        drawMeasuringPoint(measuringPoint.getValue(), measuringPoint.getKey());
+    private void drawMeasuringPoint(MeasuringPoint mp) {
+        drawMeasuringPoint(mp.getLatLng(), mp.getName());
     }
 
     /**
@@ -597,7 +600,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
     }
 
     private void notifyMeasurementPointsChanged() {
-        this.measuringPoints = db.getMeasurementPoints();
+        this.measuringPoints = db.getMeasuringPoints();
     }
 
     @Override

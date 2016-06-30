@@ -111,7 +111,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
 
         @Override
-        public void positionChangedListener(LatLng latLng, float bearing) {
+        public void positionChangedListener(LatLng latLng) {
             Log.d(TAG, "Position changed: " + latLng.toString());
             // Prepare marker for drone position.
             BitmapDescriptor iconDrone = BitmapDescriptorFactory.fromResource(
@@ -121,11 +121,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
             mMarkerDronePosition = mMap.addMarker(new MarkerOptions()
                     .icon(iconDrone)
+                    .anchor(0.5f, 0.5f)
                     .position(latLng));
         }
 
         @Override
         public void onWifiScanlistChanged(ArrayList<BaseStation> baseStations) {
+
+        }
+
+        @Override
+        public void onBearingChangedListener(float bearing) {
 
         }
     };
@@ -323,6 +329,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     route.add(mMap.addMarker(new MarkerOptions()
                             .position(latLng)
                             .icon(iconStart)
+                            .anchor(0.5f, 0.5f)
                             .draggable(true)));
                 } else {
                     MarkerOptions markerOptions = new MarkerOptions()
@@ -379,6 +386,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     .position(baseStation.getLatLng())
                     .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_router))
                     .title(baseStation.getSsid())
+                    .anchor(0.5f, 0.5f)
                     .draggable(true));
         }
     }

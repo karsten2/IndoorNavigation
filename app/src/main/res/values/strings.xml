@@ -37,7 +37,8 @@
     <string name="dialog_radiomap_length">Dauer der Messung (in Sekunden)</string>
     <string name="dialog_radiomap_bearing">Aktuelle Ausrichtung der Drohne</string>
 
-    <string name="export_db">Datenbank nach Downloads exportieren</string>
+    <string name="export_db">Datenbank exportieren</string>
+    <string name="import_db">Datenbank importieren</string>
 
     <string-array name="spinnerRadiomap">
         <item>Basestation hinzufügen</item>

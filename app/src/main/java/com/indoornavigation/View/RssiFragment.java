@@ -100,7 +100,12 @@ public class RssiFragment extends Fragment {
         }
 
         @Override
-        public void positionChangedListener(LatLng latLng, float bearing) {
+        public void onBearingChangedListener(float bearing) {
+
+        }
+
+        @Override
+        public void positionChangedListener(LatLng latLng) {
         }
 
         @Override

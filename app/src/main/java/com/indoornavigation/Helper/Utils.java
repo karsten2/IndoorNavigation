@@ -103,7 +103,7 @@ public abstract class Utils {
      * @param context who calls the function.
      * @param dbName Name of the database to backup. (If empty, radiomap.db is used).
      */
-    public static void copyDbToExternal(Context context, String dbName) {
+    public static void exportDb(Context context, String dbName) {
         try {
             if (dbName.equals(""))
                 dbName = "radiomap.db";
@@ -123,11 +123,45 @@ public abstract class Utils {
                 src.close();
                 dst.close();
 
-                Toast.makeText(context, "Export successful!", Toast.LENGTH_LONG).show();
+                Toast.makeText(context, "Datenbank nach Downloads exportiert!", Toast.LENGTH_LONG).show();
             }
         } catch (Exception e) {
             Log.e("Utils", e.getMessage());
-            Toast.makeText(context, "Exporting database failed!", Toast.LENGTH_LONG).show();
+            Toast.makeText(context, "Exportieren fehlgeschlagen!", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    /**
+     * Create a backup of the database.
+     *
+     * @param context who calls the function.
+     * @param dbName Name of the database to backup. (If empty, radiomap.db is used).
+     */
+    public static void importDb(Context context, String dbName) {
+        try {
+            if (dbName.equals(""))
+                dbName = "radiomap.db";
+
+            File sd = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            File data = Environment.getDataDirectory();
+
+            if (sd.canWrite()) {
+                String currentDBPath = "//data//" + context.getApplicationContext().getPackageName() + "//databases//"
+                        + dbName;
+                File backupDB = new File(data, currentDBPath);
+                File currentDB = new File(sd, dbName);
+
+                FileChannel src = new FileInputStream(currentDB).getChannel();
+                FileChannel dst = new FileOutputStream(backupDB).getChannel();
+                dst.transferFrom(src, 0, src.size());
+                src.close();
+                dst.close();
+
+                Toast.makeText(context, "Datenbank von Downloads importiert!", Toast.LENGTH_LONG).show();
+            }
+        } catch (Exception e) {
+            Log.e("Utils", e.getMessage());
+            Toast.makeText(context, "Import fehlgeschlagen!", Toast.LENGTH_LONG).show();
         }
     }
 }

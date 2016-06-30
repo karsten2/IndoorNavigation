@@ -105,7 +105,7 @@ public abstract class Lateration_old {
             double[] lin = x.toArray();
 
             ret = mercToLatLng(new Point(centroid[0], centroid[1]));
-            Log.d("Lateration", ret.toString());
+            //Log.d("Lateration", ret.toString());
 
 
             return ret;

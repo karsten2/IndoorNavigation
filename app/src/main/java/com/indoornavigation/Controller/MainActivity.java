@@ -130,7 +130,9 @@ public class MainActivity extends AppCompatActivity
             } else if (id == R.id.nav_data) {
                 fragment = RssiFragment.class.newInstance();
             } else if (id == R.id.nav_export) {
-                Utils.copyDbToExternal(this, "radiomap.db");
+                Utils.exportDb(this, "radiomap.db");
+            } else if (id == R.id.nav_import) {
+                Utils.importDb(this, "radiomap.db");
             }
 
             FragmentManager fragmentManager = getSupportFragmentManager();

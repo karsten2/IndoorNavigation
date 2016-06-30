@@ -12,6 +12,7 @@ import android.util.Log;
 import com.google.android.gms.maps.model.LatLng;
 import com.indoornavigation.Model.BaseStation;
 import com.indoornavigation.Model.CustomVector;
+import com.indoornavigation.Model.MeasuringPoint;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -40,14 +41,10 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
         Log.d("sql", "Creating database tables.");
         db.execSQL(DbTables.RadioMap.SQL_CREATE_ENTRIES);
         db.execSQL(DbTables.ApRegressionValues.SQL_CREATE_ENTRIES);
-        db.execSQL(DbTables.RadioMap_3.SQL_CREATE_ENTRIES);
-        db.execSQL(DbTables.RadioMapNormalized_3.SQL_CREATE_ENTRIES);
-        db.execSQL(DbTables.RadioMap_4.SQL_CREATE_ENTRIES);
-        db.execSQL(DbTables.RadioMapNormalized_4.SQL_CREATE_ENTRIES);
-        db.execSQL(DbTables.RadioMap_5.SQL_CREATE_ENTRIES);
-        db.execSQL(DbTables.RadioMapNormalized_5.SQL_CREATE_ENTRIES);
-        db.execSQL(DbTables.RadioMap_6.SQL_CREATE_ENTRIES);
-        db.execSQL(DbTables.RadioMapNormalized_6.SQL_CREATE_ENTRIES);
+        db.execSQL(DbTables.Radiomap_3.SQL_CREATE_ENTRIES);
+        db.execSQL(DbTables.Radiomap_4.SQL_CREATE_ENTRIES);
+        db.execSQL(DbTables.Radiomap_5.SQL_CREATE_ENTRIES);
+        db.execSQL(DbTables.Radiomap_6.SQL_CREATE_ENTRIES);
         db.execSQL(DbTables.MeasuringPoints.SQL_CREATE_ENTRIES);
     }
 
@@ -188,7 +185,7 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
     public void createTable(String query) {
         try {
             SQLiteDatabase db = this.getWritableDatabase();
-            Log.d("sql", query);
+            Log.d("sql", " " + query);
             db.execSQL(query);
         } catch (SQLiteException e) {
             Log.e(TAG, "Error while creating table:\n" + e.getMessage());
@@ -253,16 +250,17 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
      * Gets all measuring points from the database.
      * @return Hashmap with all measuring points key: name, value: latlng.
      */
-    public HashMap<String, LatLng> getMeasurementPoints() {
-        HashMap<String, LatLng> dbValues = new HashMap<>();
+    public ArrayList<MeasuringPoint> getMeasuringPoints() {
+        ArrayList<MeasuringPoint> dbValues = new ArrayList<>();
         Cursor c = this.rawQuery(DbTables.MeasuringPoints.SQL_SELECT_ALL);
 
         if (c.moveToFirst()) {
             do {
+                int id = c.getInt(c.getColumnIndexOrThrow("_id"));
                 String name = c.getString(c.getColumnIndexOrThrow("NAME"));
                 double lat = c.getDouble(c.getColumnIndexOrThrow("LAT"));
                 double lng = c.getDouble(c.getColumnIndexOrThrow("LNG"));
-                dbValues.put(name, new LatLng(lat, lng));
+                dbValues.add(new MeasuringPoint(name, new LatLng(lat, lng), id));
             } while (c.moveToNext());
         }
 
@@ -318,18 +316,22 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
      * @param size number of found base stations. Indicates what db table to use.
      * @return Hashmap with coordinates and vectors.
      */
-    public ArrayList<CustomVector> getVectorTable(int size) {
+    public ArrayList<CustomVector> getVectorTable(int size, double bearing) {
         ArrayList<CustomVector> returnValue = new ArrayList<>();
 
         try {
-            Cursor c = this.rawQuery("SELECT * FROM radiomap_normalized_" + size);
+            Cursor c = this.rawQuery(String.format("SELECT * FROM radiomap_%s r " +
+                    "WHERE r._id IN (" +
+                    "SELECT _id FROM radiomap_%1$s r2 " +
+                    "WHERE r.ID_MEASURING = r2.ID_MEASURING " +
+                    "ORDER BY abs(r2.BEARING - %s) LIMIT  1)", size, bearing));
 
             if (c != null && c.moveToFirst()) {
                 do {
                     LatLng latLng = getLatLng(c.getInt(c.getColumnIndexOrThrow("ID_MEASURING")));
                     ArrayList<Double> rss = new ArrayList<>();
                     for (int i = 1; i <= size; i++) {
-                        rss.add(c.getDouble(c.getColumnIndexOrThrow(String.format("ap%s_id", i))));
+                        rss.add(c.getDouble(c.getColumnIndexOrThrow(String.format("AP%s_RSSI", i))));
                     }
                     returnValue.add(new CustomVector(latLng, rss));
 

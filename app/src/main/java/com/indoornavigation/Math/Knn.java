@@ -30,7 +30,7 @@ public class Knn {
         data.add(new DataEntry(new double[]{180,70}, "Female"));
         data.add(new DataEntry(new double[]{163,110}, "Female"));
         Knn nn = new Knn(data, 3); //3 neighbours
-        Log.d("KNN", "Classified as: "+nn.classify(new DataEntry(new double[]{170, 60},"Ignore")));
+        //Log.d("KNN", "Classified as: "+nn.classify(new DataEntry(new double[]{170, 60},"Ignore")));
     }
 
 

@@ -61,16 +61,11 @@ public class DroneController {
 
     private ArrayList<BaseStation> dbBaseStations = new ArrayList<>();
     private ArrayList<Statistics> apStatistics = new ArrayList<>();
-    private int statisticsWindowSize = 80;
+    private int statisticsWindowSize = 20;
     private Statistics droneStatisticsLat = new Statistics(20);
     private Statistics droneStatisticsLng = new Statistics(20);
 
     private EstimatePosition estimatePositionTask;
-
-    private ArrayList<CustomVector> vectorTable3 = new ArrayList<>();
-    private ArrayList<CustomVector> vectorTable4 = new ArrayList<>();
-    private ArrayList<CustomVector> vectorTable5 = new ArrayList<>();
-    private ArrayList<CustomVector> vectorTable6 = new ArrayList<>();
 
     private List<Listener> mListener;
 
@@ -91,7 +86,9 @@ public class DroneController {
 
         void onDroneConnectionChangedListener(boolean connected);
 
-        void positionChangedListener(LatLng latLng, float bearing);
+        void onBearingChangedListener(float bearing);
+
+        void positionChangedListener(LatLng latLng);
 
         void onWifiScanlistChanged(ArrayList<BaseStation> baseStations);
     }
@@ -136,14 +133,20 @@ public class DroneController {
         }
     }
 
+    private void notifyBearingChanged(float bearing) {
+        for (Listener listener : mListener) {
+            listener.onBearingChangedListener(bearing);
+        }
+    }
+
     /**
      * Event fires when the computed position of the drone changed.
      *
      * @param latLng the app computed.
      */
-    private void notifyPositionChanged(LatLng latLng, float bearing) {
+    private void notifyPositionChanged(LatLng latLng) {
         for (Listener listener : mListener) {
-            listener.positionChangedListener(latLng, bearing);
+            listener.positionChangedListener(latLng);
         }
     }
 
@@ -168,9 +171,6 @@ public class DroneController {
         droneDiscoverer.setup();
         droneDiscoverer.addListener(mDiscovererListener);
         droneDiscoverer.startDiscovering();
-
-        // tables that contain all the data from the offline phase.
-        loadVectorTables();
     }
 
     private Handler handler = new Handler();
@@ -252,7 +252,7 @@ public class DroneController {
                     break;
             }
 
-            Log.d(TAG, state.toString());
+            //Log.d(TAG, state.toString());
         }
 
         @Override
@@ -296,6 +296,7 @@ public class DroneController {
         @Override
         public void onAttitudeChanged(float roll, float pitch, float yaw) {
             currentAttitudeYaw = radToDeg(yaw);
+            notifyBearingChanged(currentAttitudeYaw);
         }
 
         @Override
@@ -304,25 +305,8 @@ public class DroneController {
         }
     };
 
-    /**
-     * Load all vector tables from the database.
-     */
-    private void loadVectorTables() {
-        this.vectorTable3 = db.getVectorTable(3);
-        this.vectorTable4 = db.getVectorTable(4);
-        this.vectorTable5 = db.getVectorTable(5);
-        this.vectorTable6 = db.getVectorTable(6);
-    }
-
-    private ArrayList<CustomVector> getVectorTable(int size) {
-        switch (size) {
-            case 3: return this.vectorTable3;
-            case 4: return this.vectorTable4;
-            case 5: return this.vectorTable5;
-            case 6: return this.vectorTable6;
-        }
-
-        return new ArrayList<>();
+    private ArrayList<CustomVector> getVectorTable(int size, Double bearing) {
+        return db.getVectorTable(size, bearing);
     }
 
     public BebopDrone.Listener getBebopListener() {
@@ -493,7 +477,6 @@ public class DroneController {
                         temp.setRssi(stat.getMean());
                         foundBaseStations.add(temp);
                         foundIds.add(temp.getDbId());
-                        foundRSS.add(bs.getRssi());
                         break;
                     }
                 }
@@ -512,10 +495,16 @@ public class DroneController {
         if (foundBaseStations.size() >= 3) {
             if (db.hasData(
                     DbTables.tableContainsAps(
-                            "radiomap_normalized_" + foundBaseStations.size(), foundIds))) {
+                            "radiomap_" + foundBaseStations.size(), foundIds))) {
                 ArrayList<CustomVector> vectorTable =
-                        getVectorTable(foundBaseStations.size());
+                        getVectorTable(foundBaseStations.size(), (double) this.currentAttitudeYaw);
                 ArrayList<CustomVectorPair> vectorDifferences = new ArrayList<>();
+
+                Collections.sort(foundBaseStations);
+
+                for (BaseStation bs : foundBaseStations) {
+                    foundRSS.add(bs.getRssi());
+                }
 
                 foundRSS = MathUtils.normalizeVector(foundRSS);
 
@@ -529,9 +518,9 @@ public class DroneController {
                 }
 
                 // find the N smallest values:
-                int N = 1;
+                int N = 3;
                 Collections.sort(vectorDifferences);
-                LatLng newPosition = averageLatLng(vectorDifferences.subList(0, N - 1));
+                LatLng newPosition = averageLatLng(vectorDifferences.subList(0, N));
 
                 if (!newPosition.equals(new LatLng(0, 0)) && !newPosition.equals(currentPosition)) {
 
@@ -539,6 +528,9 @@ public class DroneController {
                     droneStatisticsLng.add(newPosition.longitude);
                     currentPosition = new LatLng(
                             droneStatisticsLat.getMean(), droneStatisticsLng.getMean());
+
+                    currentPosition = newPosition;
+                    Log.d("Drone", "Position: " + currentPosition);
                     return true;
                 }
             }
@@ -835,7 +827,7 @@ public class DroneController {
                     //return getPositionFromRSS(new ArrayList<>(baseStations[0]));
                     return getPositionFromRadiomap(baseStations[0]);
                 } catch (Exception e) {
-                    Log.e("estimate position", e.getMessage());
+                    Log.e("estimate position", " " + e.getMessage());
                 }
             }
             return false;
@@ -845,7 +837,7 @@ public class DroneController {
         protected void onPostExecute(Boolean notify) {
             super.onPostExecute(notify);
             if (notify != null && notify)
-                notifyPositionChanged(currentPosition, currentAttitudeYaw);
+                notifyPositionChanged(currentPosition);
         }
     }
 }
