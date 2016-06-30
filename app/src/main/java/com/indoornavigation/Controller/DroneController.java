@@ -1,8 +1,6 @@
 package com.indoornavigation.Controller;
 
 import android.content.Context;
-import android.content.Intent;
-import android.database.Cursor;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.util.Log;
@@ -10,14 +8,17 @@ import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
-import com.google.common.base.Functions;
-import com.google.common.collect.Ordering;
 import com.google.maps.android.SphericalUtil;
+import com.indoornavigation.Database.DbTables;
+import com.indoornavigation.Database.SQLiteDBHelper;
+import com.indoornavigation.Drone.BebopDrone;
+import com.indoornavigation.Drone.DroneDiscoverer;
 import com.indoornavigation.Helper.Utils;
 import com.indoornavigation.Math.Lateration_old;
 import com.indoornavigation.Math.MathUtils;
 import com.indoornavigation.Math.SRegression;
 import com.indoornavigation.Math.Statistics;
+import com.indoornavigation.Model.BaseStation;
 import com.indoornavigation.Model.CustomVector;
 import com.indoornavigation.Model.CustomVectorPair;
 import com.parrot.arsdk.ARSDK;
@@ -27,17 +28,10 @@ import com.parrot.arsdk.arcontroller.ARCONTROLLER_DEVICE_STATE_ENUM;
 import com.parrot.arsdk.arcontroller.ARControllerCodec;
 import com.parrot.arsdk.arcontroller.ARFrame;
 import com.parrot.arsdk.ardiscovery.ARDiscoveryDeviceService;
-import com.indoornavigation.Database.DbTables;
-import com.indoornavigation.Database.SQLiteDBHelper;
-import com.indoornavigation.Drone.BebopDrone;
-import com.indoornavigation.Drone.DroneDiscoverer;
-import com.indoornavigation.Model.BaseStation;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Class that handles all drone events and inputs.
@@ -61,7 +55,7 @@ public class DroneController {
 
     private ArrayList<BaseStation> dbBaseStations = new ArrayList<>();
     private ArrayList<Statistics> apStatistics = new ArrayList<>();
-    private int statisticsWindowSize = 20;
+    private int statisticsWindowSize = 10;
     private Statistics droneStatisticsLat = new Statistics(20);
     private Statistics droneStatisticsLng = new Statistics(20);
 
@@ -69,7 +63,7 @@ public class DroneController {
 
     private List<Listener> mListener;
 
-
+    public boolean estimatePosition = false;
 
     // Load native libraries, mandatory!
     static {
@@ -286,10 +280,12 @@ public class DroneController {
             notifyWifiScanlistChanged(baseStations);
             //Log.d(TAG, "wifi found: " + baseStations.size());
 
-            if (estimatePositionTask == null ||
-                    estimatePositionTask.getStatus() == AsyncTask.Status.FINISHED) {
-                estimatePositionTask = new EstimatePosition();
-                estimatePositionTask.execute(baseStations);
+            if (estimatePosition) {
+                if (estimatePositionTask == null ||
+                        estimatePositionTask.getStatus() == AsyncTask.Status.FINISHED) {
+                    estimatePositionTask = new EstimatePosition();
+                    estimatePositionTask.execute(baseStations);
+                }
             }
         }
 
@@ -518,7 +514,7 @@ public class DroneController {
                 }
 
                 // find the N smallest values:
-                int N = 3;
+                int N = 4;
                 Collections.sort(vectorDifferences);
                 LatLng newPosition = averageLatLng(vectorDifferences.subList(0, N));
 
@@ -529,7 +525,7 @@ public class DroneController {
                     currentPosition = new LatLng(
                             droneStatisticsLat.getMean(), droneStatisticsLng.getMean());
 
-                    currentPosition = newPosition;
+                    //currentPosition = newPosition;
                     Log.d("Drone", "Position: " + currentPosition);
                     return true;
                 }
@@ -709,6 +705,8 @@ public class DroneController {
     @Override
     protected void finalize() throws Throwable {
         super.finalize();
+
+        Log.d("drone", "finalized");
 
         if (droneDiscoverer != null) {
             droneDiscoverer.stopDiscovering();

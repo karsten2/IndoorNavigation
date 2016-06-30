@@ -21,6 +21,8 @@ import android.support.v4.app.Fragment;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -45,6 +47,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.indoornavigation.Adapter.BsAdapter;
 import com.indoornavigation.Adapter.WifiAdapter;
 import com.indoornavigation.Controller.DroneController;
+import com.indoornavigation.Controller.MainActivity;
 import com.indoornavigation.Database.DbTables;
 import com.indoornavigation.Database.SQLiteDBHelper;
 import com.indoornavigation.Helper.MapUtils;
@@ -81,6 +84,11 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
     private Spinner spinner;
     private BsAdapter bsAdapter;
     private SQLiteDBHelper db;
+
+    private String lastSelectedLength;
+    private int lastSelectedItem = -1;
+
+    private MenuItem menuDroneConnectionState;
 
     private static final String TAG = "RadiomapFragment";
 
@@ -126,7 +134,15 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
         public void videoReceivedListener(ARControllerCodec codec) { }
 
         @Override
-        public void onDroneConnectionChangedListener(boolean connected) { }
+        public void onDroneConnectionChangedListener(boolean connected) {
+            if (menuDroneConnectionState != null) {
+                if (connected) {
+                    menuDroneConnectionState.setIcon(R.drawable.ic_drone_connected);
+                } else {
+                    menuDroneConnectionState.setIcon(R.drawable.ic_drone_disconnected);
+                }
+            }
+        }
 
         @Override
         public void onBearingChangedListener(float bearing) {
@@ -140,9 +156,17 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
 
         @Override
         public void onWifiScanlistChanged(ArrayList<BaseStation> baseStations) {
-            if (write && !busy) updateStatistics(new ArrayList<BaseStation>(baseStations));
+            if (write && !busy) {
+                updateStatistics(new ArrayList<BaseStation>(baseStations));
+            }
         }
     };
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+        menuDroneConnectionState = menu.findItem(R.id.action_connectionState);
+    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -150,7 +174,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
 
         db = new SQLiteDBHelper(getContext());
 
-        DroneController droneController = new DroneController(getContext());
+        DroneController droneController = ((MainActivity) getActivity()).mDroneController;
         droneController.setListener(droneListener);
 
         View view = inflater.inflate(R.layout.fragment_radiomap, container, false);
@@ -341,6 +365,8 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
                     adapterList);
             spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
             spinner.setAdapter(spinnerAdapter);
+            if (lastSelectedItem != -1)
+                spinner.setSelection(lastSelectedItem);
         }
 
         if (bsAdapter == null)
@@ -364,6 +390,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
         }
 
         final TextView tvDuration = (TextView) dialogView.findViewById(R.id.txtLength);
+        if (tvDuration != null) tvDuration.setText(lastSelectedLength);
 
         builder.setPositiveButton("Start", new DialogInterface.OnClickListener() {
             @Override
@@ -376,6 +403,8 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
                             break;
                         }
                     }
+                    lastSelectedLength = tvDuration.getText().toString();
+                    lastSelectedItem = spinner.getSelectedItemPosition();
 
                     launchBarDialog(Integer.valueOf(tvDuration.getText().toString()));
                 }

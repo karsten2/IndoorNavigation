@@ -215,6 +215,7 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='" + tableName + "'",
                 null);
 
+        cursor.close();
         return cursor.getCount() > 0;
 
     }
@@ -264,6 +265,8 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
             } while (c.moveToNext());
         }
 
+        c.close();
+
         return dbValues;
     }
 
@@ -296,6 +299,8 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
             } while (cursor.moveToNext());
         }
 
+        cursor.close();
+
         return ret;
     }
 
@@ -305,9 +310,11 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
      * @return true if cursor has data, else false.
      */
     public boolean hasData(String query) {
-        Cursor c = this.rawQuery(query);
-
-        return c != null && c.moveToFirst();
+        try (Cursor c = this.rawQuery(query)) {
+            return c != null && c.moveToFirst();
+        } finally {
+            close();
+        }
     }
 
     /**
@@ -337,6 +344,10 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
 
                 } while (c.moveToNext());
             }
+
+            if (c != null) {
+                c.close();
+            }
         } catch (IllegalArgumentException e) {
             Log.e(TAG, e.getMessage());
         }
@@ -360,6 +371,10 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
             double lat = c.getDouble(c.getColumnIndexOrThrow("LAT"));
             double lng = c.getDouble(c.getColumnIndexOrThrow("LNG"));
             returnValue = new LatLng(lat, lng);
+        }
+
+        if (c != null) {
+            c.close();
         }
 
         return returnValue;

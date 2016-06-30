@@ -35,6 +35,7 @@ public class MainActivity extends AppCompatActivity
         RssiFragment.OnFragmentInteractionListener {
 
     private static final String TAG = "MainActivity";
+    public DroneController mDroneController;
 
     @Override
     public void onFragmentInteraction(Uri uri) { }
@@ -64,6 +65,8 @@ public class MainActivity extends AppCompatActivity
         } catch (InstantiationException | IllegalAccessException e) {
             Log.e(TAG, e.getMessage());
         }
+
+        this.mDroneController = new DroneController(this);
     }
 
     @Override
@@ -146,5 +149,12 @@ public class MainActivity extends AppCompatActivity
             drawer.closeDrawer(GravityCompat.START);
         }
         return true;
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (mDroneController != null) mDroneController.destroy();
+        Log.d("drone", "main destroyed.");
+        super.onDestroy();
     }
 }

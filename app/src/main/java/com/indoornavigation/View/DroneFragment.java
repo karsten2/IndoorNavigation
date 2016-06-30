@@ -87,6 +87,8 @@ public class DroneFragment extends Fragment {
     public void onPause() {
         super.onPause();
 
+        Log.d("drone", "paused");
+
         droneDiscoverer.stopDiscovering();
         droneDiscoverer.cleanup();
         droneDiscoverer.removeListener(mDiscovererListener);

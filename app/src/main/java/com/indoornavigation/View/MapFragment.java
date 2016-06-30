@@ -4,7 +4,6 @@ import android.Manifest;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
@@ -32,22 +31,22 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
-import com.google.android.gms.maps.model.GroundOverlayOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
-import com.indoornavigation.Helper.MapUtils;
-import com.indoornavigation.Math.Knn;
-import com.parrot.arsdk.arcontroller.ARControllerCodec;
+import com.indoor.navigation.indoornavigation.R;
 import com.indoornavigation.Controller.DroneController;
+import com.indoornavigation.Controller.MainActivity;
 import com.indoornavigation.Database.DbTables;
 import com.indoornavigation.Database.SQLiteDBHelper;
+import com.indoornavigation.Helper.MapUtils;
 import com.indoornavigation.Helper.Utils;
+import com.indoornavigation.Math.Knn;
 import com.indoornavigation.Model.BaseStation;
 import com.indoornavigation.Model.CustomPolyLine;
-import com.indoor.navigation.indoornavigation.R;
 import com.indoornavigation.Services.WifiScanner;
+import com.parrot.arsdk.arcontroller.ARControllerCodec;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -84,6 +83,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private OnFragmentInteractionListener mListener;
 
     private final DroneController.Listener mDroneControllerListener = new DroneController.Listener() {
+        float mBearing = 0.0f;
+
         @Override
         public void checkPointReachedListener(Marker marker) {
             //route.get(route.indexOf(marker)).setIcon(iconDone);
@@ -122,7 +123,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             mMarkerDronePosition = mMap.addMarker(new MarkerOptions()
                     .icon(iconDrone)
                     .anchor(0.5f, 0.5f)
-                    .position(latLng));
+                    .position(latLng)
+                    .rotation(mBearing + 180));
         }
 
         @Override
@@ -132,7 +134,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         @Override
         public void onBearingChangedListener(float bearing) {
-
+            mBearing = bearing;
         }
     };
 
@@ -153,8 +155,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
-        droneController = new DroneController(getContext());
+        droneController = ((MainActivity) getActivity()).mDroneController;
         droneController.setListener(mDroneControllerListener);
+        droneController.estimatePosition = true;
 
         View view = inflater.inflate(R.layout.fragment_map, container, false);
 
@@ -249,8 +252,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         mMap = googleMap;
 
-        // create object to mock the room
-
         // create object to be the route
         // create marker options
         // create polyline options
@@ -270,7 +271,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         });
 
 
-        mMap.setOnMarkerClickListener(onMarkerClickListener);
         mMap.setOnMapClickListener(onMapClickListener);
         mMap.setOnMarkerDragListener(onMarkerDragListener);
 
@@ -298,24 +298,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         mMap.setMyLocationEnabled(true);
     }
-
-    GoogleMap.OnMarkerClickListener onMarkerClickListener = new GoogleMap.OnMarkerClickListener() {
-        @Override
-        public boolean onMarkerClick(final Marker marker) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-            builder.setTitle("Delete marker");
-            builder.setMessage("Are you sure you want to delete this marker?");
-            builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    route.removeLineMarker(marker);
-                }
-            });
-            builder.setNegativeButton("Cancel", null);
-            builder.show();
-            return false;
-        }
-    };
 
     /**
      * Event for adding a route when clicking on the map.
@@ -454,8 +436,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     @Override
     public void onDestroy() {
         super.onDestroy();
-
-        if (droneController != null) droneController.destroy();
         Utils.stopService(WifiScanner.class, getActivity());
     }
 
