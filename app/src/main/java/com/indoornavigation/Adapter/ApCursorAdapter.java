@@ -8,8 +8,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.indoornavigation.Database.DbTables;
 import com.indoor.navigation.indoornavigation.R;
+import com.indoornavigation.Database.DbTables;
 
 /**
  * Custom Adapter between SQLite and the apps listview.
@@ -31,8 +31,8 @@ public class ApCursorAdapter extends CursorAdapter {
         TextView tvInfo = (TextView) view.findViewById(R.id.txtInfo);
 
         tvESSID.setText(cursor.getString(
-                cursor.getColumnIndexOrThrow(DbTables.RadioMap.COL_SSID)));
+                cursor.getColumnIndexOrThrow(DbTables.BaseStation.COL_SSID)));
         tvInfo.setText(cursor.getString(
-                cursor.getColumnIndexOrThrow(DbTables.RadioMap.COL_BSSID)));
+                cursor.getColumnIndexOrThrow(DbTables.BaseStation.COL_BSSID)));
     }
 }

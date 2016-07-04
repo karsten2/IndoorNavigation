@@ -1,0 +1,10 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <ListPreference
+        android:key="localization_type"
+        android:title="@string/pref_localization_list"
+        android:entries="@array/pref_loc_entries"
+        android:entryValues="@array/pref_loc_entries_values"
+        android:defaultValue="lat"/>
+
+</PreferenceScreen>

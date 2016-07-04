@@ -1,40 +1,32 @@
 package com.indoornavigation.View;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.database.Cursor;
 import android.net.Uri;
-import android.net.wifi.ScanResult;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
-import com.indoornavigation.Adapter.WifiAdapter;
-import com.indoornavigation.Database.DbTables;
+import com.indoornavigation.Adapter.BsAdapter;
 import com.indoornavigation.Database.SQLiteDBHelper;
-import com.indoornavigation.Helper.Utils;
 import com.indoornavigation.Math.SRegression;
 import com.indoornavigation.Math.Statistics;
-import com.indoornavigation.Services.WifiScanner;
 import com.parrot.arsdk.arcontroller.ARControllerCodec;
 import com.indoornavigation.Controller.DroneController;
-import com.indoornavigation.Model.BaseStation;
 import com.indoor.navigation.indoornavigation.R;
+import com.indoornavigation.Model.BaseStation;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -47,10 +39,8 @@ public class RssiFragment extends Fragment {
 
     private OnFragmentInteractionListener mListener;
     private boolean write = false;
-    private double distance = -1;
-    private ArrayList<ArrayList<BaseStation>> allResults = new ArrayList<>();
-    private WifiAdapter wifiAdapter;
-    private ArrayList<ScanResult> scanResults = new ArrayList<>();
+
+    private BsAdapter bsAdapter;
     private BaseStation bsFilter;
     private TextView txtFilter;
     private int window1 = 65;
@@ -63,7 +53,9 @@ public class RssiFragment extends Fragment {
                     + ";PROX_CALC_RAW;PROX_CALC_MEAN_%1$s;PROX_CALC_MEAN_%2$s;PROX_CALC_MEAN_%3$s"
                     + ";PROX_CALC_MEDIAN_%1$s;PROX_CALC_MEDIAN_%2$s;PROX_CALC_MEDIAN_%3$s\n", window1, window2, window3);
     private BufferedWriter bw;
-    private SQLiteDBHelper dbHelper;
+    private SQLiteDBHelper db;
+
+    private final double distance = 1.0;
 
     Statistics statistics_1, statistics_2, statistics_3;
 
@@ -73,6 +65,8 @@ public class RssiFragment extends Fragment {
     private Button btnStart;
     private ProgressBar pbar;
 
+    public static final String TAG = "RssiFragment";
+
     public RssiFragment() {
         // Required empty public constructor
     }
@@ -80,10 +74,8 @@ public class RssiFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getContext().registerReceiver(
-                broadcastReceiver, new IntentFilter(WifiScanner.TAG));
 
-        dbHelper = new SQLiteDBHelper(getContext());
+        db = new SQLiteDBHelper(getContext());
     }
 
     DroneController.Listener mDroneControllerListener = new DroneController.Listener() {
@@ -113,7 +105,7 @@ public class RssiFragment extends Fragment {
             Log.d("Drone rssi", "wifi detected: " + baseStations.size());
 
             if (write && !creatingStatistics) {
-                createStatistics(new ArrayList<BaseStation>(baseStations));
+                createStatistics(new ArrayList<>(baseStations));
             }
         }
     };
@@ -156,16 +148,11 @@ public class RssiFragment extends Fragment {
 
         txtFilter = (TextView) view.findViewById(R.id.txtFilter);
 
-        final EditText txtNumber = (EditText) view.findViewById(R.id.txtNumber);
-
         btnStart = (Button) view.findViewById(R.id.btnStart);
         if (btnStart != null) {
             btnStart.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-
-                    if (txtNumber != null)
-                        distance = Double.valueOf(txtNumber.getText().toString());
 
                     statistics_1 = new Statistics(window1);
                     statistics_2 = new Statistics(window2);
@@ -243,41 +230,27 @@ public class RssiFragment extends Fragment {
      */
     private void wifiDialog() {
 
-        // start wifi service
-        Utils.startService(WifiScanner.class, getActivity());
-        wifiAdapter = new WifiAdapter(getActivity(), scanResults);
+        bsAdapter = new BsAdapter(getActivity(), db.getBaseStations());
 
         final AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
         builder.setTitle("Select Access Point");
 
         builder.setNegativeButton("Abbrechen", null);
 
-        builder.setAdapter(wifiAdapter,
+        builder.setAdapter(bsAdapter,
                 new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        bsFilter = new BaseStation(wifiAdapter.getItem(which));
-                        if (txtFilter != null)
+                        bsFilter = bsAdapter.getItem(which);
+                        if (txtFilter != null) {
                             txtFilter.setText(bsFilter.getSsid());
+                            txtFilter.setGravity(Gravity.CENTER);
+                        }
                     }
                 });
 
         builder.create().show();
     }
-
-    private final static String TAG = "RssiFragment";
-    BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            try {
-                wifiAdapter.clear();
-                wifiAdapter.addAll((ArrayList<ScanResult>) intent.getExtras().get("scanResults"));
-                wifiAdapter.notifyDataSetChanged();
-            } catch (ClassCastException e) {
-                Log.e(TAG, "wifi receiver onReceive" + e.getMessage());
-            }
-        }
-    };
 
     private void createStatistics(ArrayList<BaseStation> baseStations) {
         try {
@@ -338,35 +311,6 @@ public class RssiFragment extends Fragment {
         }
     }
 
-    private double[][] getRegressionValuesFromDb(BaseStation baseStation) {
-
-        if (dbHelper != null) {
-            Cursor cursor = dbHelper.rawQuery(
-                    "SELECT x, y " +
-                    "FROM " + DbTables.ApRegressionValues.TABLE_NAME + " regr, " +
-                    DbTables.RadioMap.TABLE_NAME + " rmap " +
-                    "WHERE regr.ap_id = rmap._id " +
-                    "AND rmap._id in (" +
-                            "SELECT _id " +
-                            "FROM " + DbTables.RadioMap.TABLE_NAME + " " +
-                            "WHERE ssid = '" + baseStation.getSsid() + "')");
-
-            double[][] regrValues = new double[cursor.getCount()][cursor.getCount()];
-            int index = 0;
-
-            if (cursor.moveToFirst()) {
-                do {
-                    regrValues[index][0] = cursor.getDouble(cursor.getColumnIndex("x"));
-                    regrValues[index][1] = cursor.getDouble(cursor.getColumnIndex("y"));
-
-                    index++;
-                } while (cursor.moveToNext());
-            }
-            return regrValues;
-        }
-        return new double[][]{};
-    }
-
     /**
      * Deactivates buttons and shows a progress bar.
      * @param disable true to disable, false to enable.
@@ -384,13 +328,6 @@ public class RssiFragment extends Fragment {
     public void onDestroy() {
         super.onDestroy();
 
-        //Utils.stopService(WifiScanner.class, getActivity());
-
-        try {
-            getContext().unregisterReceiver(broadcastReceiver);
-        } catch (Exception e) {
-            Log.e(TAG, "Tried to unregister not registerd reciever");
-        }
 
         try {
             if (bw != null) {

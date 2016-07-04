@@ -44,7 +44,7 @@ import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.indoornavigation.Adapter.BsAdapter;
+import com.indoornavigation.Adapter.BsAdapterCheckbox;
 import com.indoornavigation.Adapter.WifiAdapter;
 import com.indoornavigation.Controller.DroneController;
 import com.indoornavigation.Controller.MainActivity;
@@ -55,7 +55,6 @@ import com.indoornavigation.Helper.ScanResultComparator;
 import com.indoor.navigation.indoornavigation.R;
 import com.indoornavigation.Math.Statistics;
 import com.indoornavigation.Model.BaseStation;
-import com.indoornavigation.Model.MeasuringPoint;
 import com.parrot.arsdk.arcontroller.ARControllerCodec;
 
 import java.util.ArrayList;
@@ -72,17 +71,19 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
     private ArrayList<ScanResult> scanResults = new ArrayList<>();
 
     private GoogleMap mMap;
+    private ArrayList<Marker> bsMarker = new ArrayList<>();
+    private ArrayList<Marker> mpMarkers = new ArrayList<>();
+
     private ArrayList<BaseStation> baseStations = new ArrayList<>();
-    private ArrayList<MeasuringPoint> measuringPoints = new ArrayList<>();
+    private ArrayList<com.indoornavigation.Model.MeasuringPoint> measuringPoints = new ArrayList<>();
 
     private HashMap<String, Statistics> selectedStatistics = new HashMap<>();
-    private LatLng selectedMeasuringPoint;
     private ArrayList<BaseStation> selectedBaseStations;
     private boolean write = false;
 
     private TextView tvBearing;
     private Spinner spinner;
-    private BsAdapter bsAdapter;
+    private BsAdapterCheckbox bsAdapterCheckbox;
     private SQLiteDBHelper db;
 
     private String lastSelectedLength;
@@ -157,7 +158,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
         @Override
         public void onWifiScanlistChanged(ArrayList<BaseStation> baseStations) {
             if (write && !busy) {
-                updateStatistics(new ArrayList<BaseStation>(baseStations));
+                updateStatistics(new ArrayList<>(baseStations));
             }
         }
     };
@@ -222,7 +223,6 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
         if (mapFragment != null) {
             mapFragment.getMapAsync(this);
         }
-
 
         return view;
     }
@@ -355,7 +355,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
         if (spinner != null) {
             Collections.sort(measuringPoints);
             ArrayList<String> adapterList = new ArrayList<>();
-            for (MeasuringPoint mp : measuringPoints) {
+            for (com.indoornavigation.Model.MeasuringPoint mp : measuringPoints) {
                 adapterList.add(mp.toString());
             }
 
@@ -369,11 +369,11 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
                 spinner.setSelection(lastSelectedItem);
         }
 
-        if (bsAdapter == null)
-            bsAdapter = new BsAdapter(getContext(), baseStations);
+        if (bsAdapterCheckbox == null)
+            bsAdapterCheckbox = new BsAdapterCheckbox(getContext(), baseStations);
         final ListView listView = (ListView) dialogView.findViewById(R.id.listView2);
         if (listView != null) {
-            listView.setAdapter(bsAdapter);
+            listView.setAdapter(bsAdapterCheckbox);
             listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -381,7 +381,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
                             .getText().toString();
                     for (BaseStation bs : baseStations) {
                         if (bs.getSsid().equals(bsSSId)) {
-                            bsAdapter.toggleSelection(bs);
+                            bsAdapterCheckbox.toggleSelection(bs);
                             break;
                         }
                     }
@@ -396,10 +396,9 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 if (tvDuration != null && spinner != null) {
-                    selectedBaseStations = bsAdapter.getCheckedItems();
-                    for (MeasuringPoint mp : measuringPoints) {
+                    selectedBaseStations = bsAdapterCheckbox.getCheckedItems();
+                    for (com.indoornavigation.Model.MeasuringPoint mp : measuringPoints) {
                         if (mp.getName().equals(spinner.getSelectedItem().toString())) {
-                            selectedMeasuringPoint = mp.getLatLng();
                             break;
                         }
                     }
@@ -516,7 +515,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
         ContentValues values = new ContentValues();
 
         Cursor c = db.rawQuery(String.format("SELECT _ID FROM %s WHERE NAME = '%s'",
-                DbTables.MeasuringPoints.TABLE_NAME, measuringPoint));
+                DbTables.MeasuringPoint.TABLE_NAME, measuringPoint));
         if (c != null && c.moveToFirst()) {
             values.put("id_measuring", c.getInt(c.getColumnIndexOrThrow("_id")));
         }
@@ -589,19 +588,19 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
      * @param bs The base station to draw.
      */
     private void drawBaseStation(BaseStation bs) {
-        mMap.addMarker(new MarkerOptions()
+        bsMarker.add(mMap.addMarker(new MarkerOptions()
                 .position(bs.getLatLng())
                 .anchor(0.5f, 0.5f)
                 .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_router))
                 .title(bs.getSsid())
-                .draggable(true));
+                .draggable(true)));
     }
 
     /**
      * Draw all measuring points.
      */
     private void drawMeasuringPoint() {
-        for (MeasuringPoint mp : measuringPoints) {
+        for (com.indoornavigation.Model.MeasuringPoint mp : measuringPoints) {
             drawMeasuringPoint(mp);
         }
     }
@@ -610,7 +609,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
      * Draw a single measuring point.
      * @param mp The point to draw.
      */
-    private void drawMeasuringPoint(MeasuringPoint mp) {
+    private void drawMeasuringPoint(com.indoornavigation.Model.MeasuringPoint mp) {
         drawMeasuringPoint(mp.getLatLng(), mp.getName());
     }
 
@@ -620,12 +619,12 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
      * @param name Name of the point.
      */
     private void drawMeasuringPoint(LatLng p, String name) {
-        mMap.addMarker(new MarkerOptions()
+        mpMarkers.add(mMap.addMarker(new MarkerOptions()
                 .position(p)
                 .title(name)
                 .anchor(0.5f, 0.5f)
                 .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_crop_square_black_24dp))
-                .draggable(true));
+                .draggable(true)));
     }
 
     private void notifyMeasurementPointsChanged() {
@@ -679,6 +678,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
         }
 
         mMap.setOnMarkerClickListener(markerClickListener);
+        mMap.setOnMarkerDragListener(markerDragListener);
 
         mMap.setMyLocationEnabled(true);
 
@@ -699,6 +699,40 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
             return false;
         }
     };
+
+    GoogleMap.OnMarkerDragListener markerDragListener = new GoogleMap.OnMarkerDragListener() {
+        @Override
+        public void onMarkerDragStart(Marker marker) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+            builder.setTitle("Marker löschen");
+            builder.setMessage("Möchten Sie den Marker wirklich löschen?");
+            builder.setPositiveButton("Löschen", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+
+                }
+            });
+
+            builder.setNegativeButton("Abbrechen", null);
+            builder.show();
+        }
+
+        @Override
+        public void onMarkerDrag(Marker marker) {
+
+        }
+
+        @Override
+        public void onMarkerDragEnd(Marker marker) {
+
+        }
+    };
+
+    private void deleteMarker(Marker marker) {
+        if (mpMarkers.contains(marker)) {
+            mpMarkers.remove(marker);
+        }
+    }
 
     /**
      * This interface must be implemented by activities that contain this

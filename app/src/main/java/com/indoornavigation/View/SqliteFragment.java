@@ -2,7 +2,6 @@ package com.indoornavigation.View;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
@@ -11,7 +10,6 @@ import android.net.wifi.ScanResult;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
-import android.support.v7.app.AlertDialog;
 
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -28,7 +26,6 @@ import com.indoornavigation.Adapter.WifiAdapter;
 import com.indoornavigation.Database.DbTables;
 import com.indoornavigation.Database.SQLiteDBHelper;
 import com.indoornavigation.Helper.Utils;
-import com.indoornavigation.Model.BaseStation;
 import com.indoor.navigation.indoornavigation.R;
 import com.indoornavigation.Services.WifiScanner;
 
@@ -75,7 +72,7 @@ public class SqliteFragment extends Fragment {
         btnDel.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                int delRows = dbHelper.sqlDelete(DbTables.RadioMap.TABLE_NAME, "", new String[]{});
+                int delRows = dbHelper.sqlDelete(DbTables.BaseStation.TABLE_NAME, "", new String[]{});
                 Toast.makeText(
                         getContext(), "Deleted " + delRows + " rows.", Toast.LENGTH_SHORT).show();
                 getTable();
@@ -94,7 +91,7 @@ public class SqliteFragment extends Fragment {
         btnDrop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                dbHelper.dropTable(DbTables.RadioMap.SQL_DROP_TABLE);
+                dbHelper.dropTable(DbTables.BaseStation.SQL_DROP_TABLE);
                 getTable();
             }
         });
@@ -103,7 +100,7 @@ public class SqliteFragment extends Fragment {
         btnCreate.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                dbHelper.createTable(DbTables.RadioMap.SQL_CREATE_ENTRIES);
+                dbHelper.createTable(DbTables.BaseStation.SQL_CREATE_ENTRIES);
                 getTable();
             }
         });
@@ -113,7 +110,7 @@ public class SqliteFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 long result = dbHelper.sqlInsert(
-                        DbTables.RadioMap.TABLE_NAME,
+                        DbTables.BaseStation.TABLE_NAME,
                         null,
                         getDummy().toDbValues());
                 Toast.makeText(getContext(), result + "rows inserted", Toast.LENGTH_SHORT).show();
@@ -128,8 +125,8 @@ public class SqliteFragment extends Fragment {
 
 
     private void getTable() {
-        if (dbHelper.tableExists(DbTables.RadioMap.TABLE_NAME)) {
-            apAdapter.changeCursor(dbHelper.sqlSelect(DbTables.RadioMap.TABLE_NAME,
+        if (dbHelper.tableExists(DbTables.BaseStation.TABLE_NAME)) {
+            apAdapter.changeCursor(dbHelper.sqlSelect(DbTables.BaseStation.TABLE_NAME,
                     null, null, null, null, null, null));
         } else {
             apAdapter.changeCursor(null);
@@ -184,8 +181,8 @@ public class SqliteFragment extends Fragment {
         }
     };
 
-    private BaseStation getDummy() {
-        return new BaseStation(
+    private com.indoornavigation.Model.BaseStation getDummy() {
+        return new com.indoornavigation.Model.BaseStation(
                 "Router_" + getRandom(),
                 "00:00:00:00:00:00",
                 "1.2.3.4.5",

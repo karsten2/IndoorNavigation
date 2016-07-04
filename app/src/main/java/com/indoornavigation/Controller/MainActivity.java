@@ -1,15 +1,17 @@
 package com.indoornavigation.Controller;
 
-import com.indoornavigation.Helper.Utils;
+
+import com.indoor.navigation.indoornavigation.R;
 import com.indoornavigation.View.DroneFragment;
 import com.indoornavigation.View.MapFragment;
 import com.indoornavigation.View.RssiFragment;
+import com.indoornavigation.View.SettingsActivity;
 import com.indoornavigation.View.SqliteFragment;
 import com.indoornavigation.View.RadiomapFragment;
-import com.indoor.navigation.indoornavigation.R;
 
 import android.content.DialogInterface;
 
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.NavigationView;
@@ -36,6 +38,7 @@ public class MainActivity extends AppCompatActivity
 
     private static final String TAG = "MainActivity";
     public DroneController mDroneController;
+    private Fragment lastFragment;
 
     @Override
     public void onFragmentInteraction(Uri uri) { }
@@ -60,8 +63,9 @@ public class MainActivity extends AppCompatActivity
         // Open Map.
         try {
             FragmentManager fragmentManager = getSupportFragmentManager();
+            lastFragment = MapFragment.class.newInstance();
             fragmentManager.beginTransaction().replace(
-                    R.id.flContent, MapFragment.class.newInstance()).commit();
+                    R.id.flContent, lastFragment).commit();
         } catch (InstantiationException | IllegalAccessException e) {
             Log.e(TAG, e.getMessage());
         }
@@ -121,7 +125,7 @@ public class MainActivity extends AppCompatActivity
     public boolean onNavigationItemSelected(MenuItem item) {
         int id = item.getItemId();
         ActionBar actionBar = getSupportActionBar();
-        Fragment fragment = new Fragment();
+        Fragment fragment = lastFragment;
 
         try {
             if (id == R.id.nav_map) {
@@ -132,14 +136,16 @@ public class MainActivity extends AppCompatActivity
                 if (actionBar != null) actionBar.setTitle(R.string.title_fragment_radiomap);
             } else if (id == R.id.nav_data) {
                 fragment = RssiFragment.class.newInstance();
-            } else if (id == R.id.nav_export) {
-                Utils.exportDb(this, "radiomap.db");
-            } else if (id == R.id.nav_import) {
-                Utils.importDb(this, "radiomap.db");
+            } else if (id == R.id.nav_settings) {
+                startActivity(new Intent(this, SettingsActivity.class));
+                return true;
             }
 
             FragmentManager fragmentManager = getSupportFragmentManager();
+            fragmentManager.beginTransaction().remove(lastFragment).commit();
             fragmentManager.beginTransaction().replace(R.id.flContent, fragment).commit();
+
+            lastFragment = fragment;
         } catch (Exception e) {
             e.printStackTrace();
         }

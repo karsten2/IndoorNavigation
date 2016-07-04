@@ -6,14 +6,14 @@
     <string name="title_activity_drone">Drohnensteuerung</string>
     <string name="title_activity_data">Data</string>
     <string name="title_fragment_radiomap">Radiomap</string>
-    <string name="edit_route">Edit route</string>
+    <string name="edit_route">Route bearbeiten</string>
 
-    <string name="fragment_rssi_distance_input">Distance</string>
+    <string name="fragment_rssi_distance_input">Distanz</string>
 
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
 
-    <string name="action_settings">Settings</string>
+    <string name="action_settings">Einstellungen</string>
 
     <string name="drone_scanning">Scanning for devices</string>
 
@@ -37,11 +37,39 @@
     <string name="dialog_radiomap_length">Dauer der Messung (in Sekunden)</string>
     <string name="dialog_radiomap_bearing">Aktuelle Ausrichtung der Drohne</string>
 
-    <string name="export_db">Datenbank exportieren</string>
-    <string name="import_db">Datenbank importieren</string>
+    <string name="basisstation_ausw_hlen">Basisstation auswählen</string>
+    <string name="ausgew_hlte_basisstation">Bitte Basisstation auswählen</string>
+    <string name="abstand_1m">Abstand: 1m</string>
+    <string name="starte_messung">Starte Messung</string>
 
     <string-array name="spinnerRadiomap">
-        <item>Basestation hinzufügen</item>
+        <item>Basisstation hinzufügen</item>
         <item>Messpunkt hinzufügen</item>
     </string-array>
+    <string name="title_activity_settings">Einstellungen</string>
+
+    <!-- Strings related to Settings -->
+    <string name="pref_database">Datenbank</string>
+
+    <string name="pref_export_db">Datenbank exportieren</string>
+    <string name="pref_description_export">Datenbank wird in den Download-Ordner exportiert</string>
+
+    <string name="pref_import_db">Datenbank importieren</string>
+    <string name="pref_description_import">Datenbank wird aus dem Download-Ordner importiert</string>
+
+    <string name="pref_localization">Lokalisierung</string>
+
+    <string name="pref_localization_list">Art der Lokalisierung</string>
+
+    <string-array name="pref_loc_entries">
+        <item>Lateration</item>
+        <item>Fingerprinting</item>
+    </string-array>
+
+    <string-array name="pref_loc_entries_values">
+        <item>1</item>
+        <item>2</item>
+    </string-array>
+
+    <string name="settings">Einstellungen</string>
 </resources>

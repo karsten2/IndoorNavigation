@@ -154,10 +154,10 @@ public class BaseStation implements Serializable, Comparator<BaseStation>, Compa
     public ContentValues toDbValues() {
         ContentValues ret = new ContentValues();
 
-        ret.put(DbTables.RadioMap.COL_SSID, this.ssid);
-        ret.put(DbTables.RadioMap.COL_BSSID, this.bssid);
-        ret.put(DbTables.RadioMap.COL_LAT, this.latLng.latitude);
-        ret.put(DbTables.RadioMap.COL_LNG, this.latLng.longitude);
+        ret.put(DbTables.BaseStation.COL_SSID, this.ssid);
+        ret.put(DbTables.BaseStation.COL_BSSID, this.bssid);
+        ret.put(DbTables.BaseStation.COL_LAT, this.latLng.latitude);
+        ret.put(DbTables.BaseStation.COL_LNG, this.latLng.longitude);
 
         return ret;
     }

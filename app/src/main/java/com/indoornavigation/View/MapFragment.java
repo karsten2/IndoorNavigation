@@ -2,7 +2,6 @@ package com.indoornavigation.View;
 
 import android.Manifest;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
@@ -11,7 +10,6 @@ import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.ActionBar;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -38,7 +36,6 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import com.indoor.navigation.indoornavigation.R;
 import com.indoornavigation.Controller.DroneController;
 import com.indoornavigation.Controller.MainActivity;
-import com.indoornavigation.Database.DbTables;
 import com.indoornavigation.Database.SQLiteDBHelper;
 import com.indoornavigation.Helper.MapUtils;
 import com.indoornavigation.Helper.Utils;
@@ -49,8 +46,6 @@ import com.indoornavigation.Services.WifiScanner;
 import com.parrot.arsdk.arcontroller.ARControllerCodec;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 public class MapFragment extends Fragment implements OnMapReadyCallback {
 
@@ -66,17 +61,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private MenuItem menuDroneConnectionState;
 
     private GoogleMap mMap;
-    private LatLng currentPosition;
-
-    private MarkerOptions mMarkerOptDronePosition;
     private Marker mMarkerDronePosition;
-
     private CustomPolyLine route;
     private boolean addRoute = false;
-
     private BitmapDescriptor iconStart, iconRoute, iconDone;
 
-    private SQLiteDBHelper dbHelper;
+    private SQLiteDBHelper db;
 
     private DroneController droneController;
 
@@ -146,7 +136,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        dbHelper = new SQLiteDBHelper(getContext());
+        db = new SQLiteDBHelper(getContext());
 
         setHasOptionsMenu(true);
     }
@@ -272,7 +262,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
 
         mMap.setOnMapClickListener(onMapClickListener);
-        mMap.setOnMarkerDragListener(onMarkerDragListener);
 
         // drawing the access points stored in the database.
         drawAccessPoints();
@@ -323,39 +312,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     route.add(mMap.addMarker(markerOptions));
                 }
             }
-        }
-    };
-
-    /**
-     * Event for dragging a marker on the map, when the marker is long clicked.
-     */
-    GoogleMap.OnMarkerDragListener onMarkerDragListener = new GoogleMap.OnMarkerDragListener() {
-        @Override
-        public void onMarkerDragStart(Marker marker) {
-        }
-
-        @Override
-        public void onMarkerDrag(Marker marker) {
-            if (route.contains(marker)) {
-                route.updateLineMarker(marker);
-            } else {
-                // update base station in database.
-                // create hashmap with columns and new values to update.
-                Map<String, String> update = new HashMap<>();
-                update.put(DbTables.RadioMap.COL_LAT, String.valueOf(marker.getPosition().latitude));
-                update.put(DbTables.RadioMap.COL_LNG, String.valueOf(marker.getPosition().longitude));
-
-                dbHelper.sqlUpdate(
-                        DbTables.RadioMap.TABLE_NAME,
-                        update,
-                        DbTables.RadioMap.COL_SSID + " = ?",
-                        new String[]{marker.getTitle()}
-                );
-            }
-        }
-
-        @Override
-        public void onMarkerDragEnd(Marker marker) {
         }
     };
 
@@ -416,7 +372,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
      * @return List with all base stations.
      */
     private ArrayList<BaseStation> getBaseStations() {
-        return dbHelper.getBaseStations();
+        return db.getBaseStations();
     }
 
     @Override
@@ -491,6 +447,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private void clearMap() {
         route.clear();
         drawAccessPoints();
+        MapUtils.addGroundOverlay(this.mMap);
     }
 
     private void setActionBarText(String text) {

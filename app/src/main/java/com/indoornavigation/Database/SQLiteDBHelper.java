@@ -10,12 +10,9 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
 import com.google.android.gms.maps.model.LatLng;
-import com.indoornavigation.Model.BaseStation;
 import com.indoornavigation.Model.CustomVector;
-import com.indoornavigation.Model.MeasuringPoint;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -39,13 +36,12 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getWritableDatabase();
 
         Log.d("sql", "Creating database tables.");
-        db.execSQL(DbTables.RadioMap.SQL_CREATE_ENTRIES);
-        db.execSQL(DbTables.ApRegressionValues.SQL_CREATE_ENTRIES);
+        db.execSQL(DbTables.BaseStation.SQL_CREATE_ENTRIES);
         db.execSQL(DbTables.Radiomap_3.SQL_CREATE_ENTRIES);
         db.execSQL(DbTables.Radiomap_4.SQL_CREATE_ENTRIES);
         db.execSQL(DbTables.Radiomap_5.SQL_CREATE_ENTRIES);
         db.execSQL(DbTables.Radiomap_6.SQL_CREATE_ENTRIES);
-        db.execSQL(DbTables.MeasuringPoints.SQL_CREATE_ENTRIES);
+        db.execSQL(DbTables.MeasuringPoint.SQL_CREATE_ENTRIES);
     }
 
     @Override
@@ -54,7 +50,7 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL(DbTables.RadioMap.SQL_DELETE_ENTRIES);
+        db.execSQL(DbTables.BaseStation.SQL_DELETE_ENTRIES);
     }
 
     @Override
@@ -226,8 +222,8 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
      * @param baseStation : Data to write to the database.
      * @return Database cursor code.
      */
-    public long addBaseStation(BaseStation baseStation) {
-        return this.sqlInsert(DbTables.RadioMap.TABLE_NAME,
+    public long addBaseStation(com.indoornavigation.Model.BaseStation baseStation) {
+        return this.sqlInsert(DbTables.BaseStation.TABLE_NAME,
                 null, baseStation.toDbValues());
     }
 
@@ -240,20 +236,20 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
     public long addMeasuringPoint(LatLng p, String name) {
         ContentValues values = new ContentValues();
 
-        values.put(DbTables.MeasuringPoints.COL_LAT, p.latitude);
-        values.put(DbTables.MeasuringPoints.COL_LNG, p.longitude);
-        values.put(DbTables.MeasuringPoints.COL_NAME, name);
+        values.put(DbTables.MeasuringPoint.COL_LAT, p.latitude);
+        values.put(DbTables.MeasuringPoint.COL_LNG, p.longitude);
+        values.put(DbTables.MeasuringPoint.COL_NAME, name);
 
-        return this.sqlInsert(DbTables.MeasuringPoints.TABLE_NAME, null, values);
+        return this.sqlInsert(DbTables.MeasuringPoint.TABLE_NAME, null, values);
     }
 
     /**
      * Gets all measuring points from the database.
      * @return Hashmap with all measuring points key: name, value: latlng.
      */
-    public ArrayList<MeasuringPoint> getMeasuringPoints() {
-        ArrayList<MeasuringPoint> dbValues = new ArrayList<>();
-        Cursor c = this.rawQuery(DbTables.MeasuringPoints.SQL_SELECT_ALL);
+    public ArrayList<com.indoornavigation.Model.MeasuringPoint> getMeasuringPoints() {
+        ArrayList<com.indoornavigation.Model.MeasuringPoint> dbValues = new ArrayList<>();
+        Cursor c = this.rawQuery(DbTables.MeasuringPoint.SQL_SELECT_ALL);
 
         if (c.moveToFirst()) {
             do {
@@ -261,7 +257,7 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
                 String name = c.getString(c.getColumnIndexOrThrow("NAME"));
                 double lat = c.getDouble(c.getColumnIndexOrThrow("LAT"));
                 double lng = c.getDouble(c.getColumnIndexOrThrow("LNG"));
-                dbValues.add(new MeasuringPoint(name, new LatLng(lat, lng), id));
+                dbValues.add(new com.indoornavigation.Model.MeasuringPoint(name, new LatLng(lat, lng), id));
             } while (c.moveToNext());
         }
 
@@ -274,15 +270,15 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
      * Get all base stations from the database.
      * @return ArrayList with all found base stations.
      */
-    public ArrayList<BaseStation> getBaseStations() {
+    public ArrayList<com.indoornavigation.Model.BaseStation> getBaseStations() {
 
-        ArrayList<BaseStation> ret = new ArrayList<>();
-        Cursor cursor = this.sqlSelect(DbTables.RadioMap.TABLE_NAME,
+        ArrayList<com.indoornavigation.Model.BaseStation> ret = new ArrayList<>();
+        Cursor cursor = this.sqlSelect(DbTables.BaseStation.TABLE_NAME,
                 null, null, null, null, null, null);
 
         if (cursor.moveToFirst()) {
             do {
-                BaseStation baseStation = new BaseStation();
+                com.indoornavigation.Model.BaseStation baseStation = new com.indoornavigation.Model.BaseStation();
                 baseStation.setSsid(cursor.getString(cursor.getColumnIndexOrThrow("SSID")));
                 baseStation.setBssid(cursor.getString(cursor.getColumnIndexOrThrow("BSSID")));
 
@@ -365,7 +361,7 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
 
         Cursor c = this.rawQuery(
                 String.format("SELECT LAT, LNG FROM %s WHERE _id = %s",
-                        DbTables.MeasuringPoints.TABLE_NAME, id));
+                        DbTables.MeasuringPoint.TABLE_NAME, id));
 
         if (c != null && c.moveToFirst()) {
             double lat = c.getDouble(c.getColumnIndexOrThrow("LAT"));

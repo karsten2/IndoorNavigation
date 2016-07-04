@@ -1,0 +1,13 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <Preference
+        android:title="@string/pref_export_db"
+        android:summary="@string/pref_description_export"
+        android:key="export"
+        android:icon="@drawable/ic_file_upload_black_24dp"/>
+
+    <Preference
+        android:title="@string/pref_import_db"
+        android:summary="@string/pref_description_import"
+        android:key="import"
+        android:icon="@drawable/ic_file_download_black_24dp"/>
+</PreferenceScreen>

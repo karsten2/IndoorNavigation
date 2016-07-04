@@ -605,14 +605,14 @@ public class DroneController {
      * lat/lng: (-1.0,0.0)atan2:    -180.0
      * lat/lng: (0.0,-1.0)atan2:    -90.0
      * <p>
-     * 90
-     * |
-     * |
+     *              90
+     *              |
+     *              |
      * +-180 _______|_______ 0
-     * |
-     * |
-     * |
-     * -90
+     *              |
+     *              |
+     *              |
+     *             -90
      * <p>
      * Use modulo to get the correct degrees.
      * degrees = degrees % 360.
@@ -642,6 +642,11 @@ public class DroneController {
 
                 while (!(currentAttitudeYaw >= bearing - tolerance
                         && currentAttitudeYaw <= bearing + tolerance)) {
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
 
                 Log.d(TAG, "Drone yawed for: " + result);
