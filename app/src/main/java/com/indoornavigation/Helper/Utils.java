@@ -85,19 +85,6 @@ public abstract class Utils {
     }
 
     /**
-     * Function to calculate the distance in meters from dbm rssi values.
-     * http://rvmiller.com/2013/05/part-1-wifi-based-trilateration-on-android/
-     *
-     * @param levelInDb RSSI value.
-     * @param freqInMHz Frequency of the sending device.
-     * @return Distance in meters.
-     */
-    public static double calculateDistance(double levelInDb, double freqInMHz) {
-        double exp = (27.55 - (20 * Math.log10(freqInMHz)) + Math.abs(levelInDb)) / 20.0;
-        return Math.pow(10.0, exp);
-    }
-
-    /**
      * Create a backup of the database.
      *
      * @param context who calls the function.

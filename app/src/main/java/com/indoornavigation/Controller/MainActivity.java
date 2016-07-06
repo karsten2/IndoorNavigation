@@ -1,12 +1,10 @@
 package com.indoornavigation.Controller;
 
-
 import com.indoor.navigation.indoornavigation.R;
 import com.indoornavigation.View.DroneFragment;
 import com.indoornavigation.View.MapFragment;
 import com.indoornavigation.View.RssiFragment;
 import com.indoornavigation.View.SettingsActivity;
-import com.indoornavigation.View.SqliteFragment;
 import com.indoornavigation.View.RadiomapFragment;
 
 import android.content.DialogInterface;
@@ -32,7 +30,6 @@ public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
         MapFragment.OnFragmentInteractionListener,
         RadiomapFragment.OnFragmentInteractionListener,
-        SqliteFragment.OnFragmentInteractionListener,
         DroneFragment.OnFragmentInteractionListener,
         RssiFragment.OnFragmentInteractionListener {
 
@@ -85,6 +82,7 @@ public class MainActivity extends AppCompatActivity
                     .setMessage("Sind Sie sicher, dass Sie die App beenden möchten?")
                     .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int which) {
+                            mDroneController.destroy();
                             MainActivity.super.onBackPressed();
                         }
                     })

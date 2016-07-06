@@ -8,19 +8,27 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AlertDialog;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.indoornavigation.Adapter.BsAdapter;
+import com.indoornavigation.Database.DbTables;
 import com.indoornavigation.Database.SQLiteDBHelper;
+import com.indoornavigation.Math.MathUtils;
 import com.indoornavigation.Math.SRegression;
 import com.indoornavigation.Math.Statistics;
 import com.parrot.arsdk.arcontroller.ARControllerCodec;
@@ -33,7 +41,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.concurrent.TimeUnit;
+import java.util.HashMap;
 
 public class RssiFragment extends Fragment {
 
@@ -43,6 +51,8 @@ public class RssiFragment extends Fragment {
     private BsAdapter bsAdapter;
     private BaseStation bsFilter;
     private TextView txtFilter;
+    private boolean writeToDb = false;
+
     private int window1 = 65;
     private int window2 = 80;
     private int window3 = 100;
@@ -55,7 +65,7 @@ public class RssiFragment extends Fragment {
     private BufferedWriter bw;
     private SQLiteDBHelper db;
 
-    private final double distance = 1.0;
+    private double distance = -1.0;
 
     Statistics statistics_1, statistics_2, statistics_3;
 
@@ -110,22 +120,6 @@ public class RssiFragment extends Fragment {
         }
     };
 
-    /**
-     * Function to calculate the distance in meters from dbm rssi values.
-     * http://rvmiller.com/2013/05/part-1-wifi-based-trilateration-on-android/
-     * https://en.wikipedia.org/wiki/Free-space_path_loss
-     * @param levelInDb RSSI value.
-     * @param freqInMHz Frequency of the sending device.
-     * @return Distance in meters.
-     */
-    private double calculateDistance(double levelInDb, double freqInMHz) {
-        if (levelInDb == 0)
-            return -1;
-
-        double exp = (27.55 - (20 * Math.log10(freqInMHz)) + Math.abs(levelInDb)) / 20.0;
-        return Math.pow(10.0, exp);
-    }
-
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -146,7 +140,39 @@ public class RssiFragment extends Fragment {
             });
         }
 
+        CheckBox cboxDb = (CheckBox) view.findViewById(R.id.cboxRssi);
+        if (cboxDb != null) {
+            cboxDb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                    writeToDb = isChecked;
+                }
+            });
+        }
+
         txtFilter = (TextView) view.findViewById(R.id.txtFilter);
+
+        final EditText txtDistance = (EditText) view.findViewById(R.id.txtDistance);
+        if (txtDistance != null) {
+
+            txtDistance.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                    if (!txtDistance.getText().toString().equals(""))
+                        distance = Double.valueOf(txtDistance.getText().toString());
+
+                    txtDistance.setGravity(Gravity.CENTER);
+                }
+            });
+        }
 
         btnStart = (Button) view.findViewById(R.id.btnStart);
         if (btnStart != null) {
@@ -154,19 +180,26 @@ public class RssiFragment extends Fragment {
                 @Override
                 public void onClick(View v) {
 
-                    statistics_1 = new Statistics(window1);
-                    statistics_2 = new Statistics(window2);
-                    statistics_3 = new Statistics(window3);
+                    if (distance >= 0 && ((writeToDb && distance == 1) || !writeToDb)) {
+                        statistics_1 = new Statistics(window1);
+                        statistics_2 = new Statistics(window2);
+                        statistics_3 = new Statistics(window3);
 
-                    MyTask myTask = new MyTask();
+                        MyTask myTask = new MyTask();
 
-                    try {
-                        bw = getCsvWriter(String.valueOf(distance));
-                    } catch (IOException e) {
-                        Log.e("CSV Error", e.getMessage());
+                        try {
+                            bw = getCsvWriter(String.valueOf(distance));
+                        } catch (IOException e) {
+                            Log.e("CSV Error", e.getMessage());
+                        }
+                        myTask.execute();
+                    } else if (distance < 0) {
+                        Toast.makeText(getContext(), "Bitte eine Distanz eingeben",
+                                Toast.LENGTH_LONG).show();
+                    } else if (writeToDb && distance != 1) {
+                        Toast.makeText(getContext(), "Um Daten in der Datenbank zu hinterlegen, " +
+                                "muss der Abstand 1m betragen", Toast.LENGTH_LONG).show();
                     }
-                    myTask.execute();
-
                 }
             });
         }
@@ -181,7 +214,7 @@ public class RssiFragment extends Fragment {
 
             write = true;
             try {
-                TimeUnit.SECONDS.sleep(300);
+                Thread.sleep(3600);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -200,6 +233,18 @@ public class RssiFragment extends Fragment {
 
     private void writeData(String data) throws IOException {
         if (bw != null) {
+            if (writeToDb) {
+                HashMap<String, String> values = new HashMap<>();
+                values.put(DbTables.BaseStation.COL_RSSI1M,
+                        String.valueOf(statistics_3.getMean()));
+                db.sqlUpdate(
+                        DbTables.BaseStation.TABLE_NAME,
+                        values,
+                        DbTables.BaseStation.COL_SSID + " = ?",
+                        new String[]{txtFilter.getText().toString()}
+                );
+            }
+
             bw.write(data);
         }
     }
@@ -282,13 +327,13 @@ public class RssiFragment extends Fragment {
                     double predictionMedian_2 = sRegression.getPrediction(median_2);
                     double predictionMedian_3 = sRegression.getPrediction(median_3);
 
-                    double proxCalcRaw = calculateDistance(rssiRaw, freqMhz);
-                    double proxCalcMean_1 = calculateDistance(mean_1, freqMhz);
-                    double proxCalcMean_2 = calculateDistance(mean_2, freqMhz);
-                    double proxCalcMean_3 = calculateDistance(mean_3, freqMhz);
-                    double proxCalcMedian_1 = calculateDistance(median_1, freqMhz);
-                    double proxCalcMedian_2 = calculateDistance(median_2, freqMhz);
-                    double proxCalcMedian_3 = calculateDistance(median_3, freqMhz);
+                    double proxCalcRaw = MathUtils.distanceFSPL(rssiRaw, freqMhz);
+                    double proxCalcMean_1 = MathUtils.distanceFSPL(mean_1, freqMhz);
+                    double proxCalcMean_2 = MathUtils.distanceFSPL(mean_2, freqMhz);
+                    double proxCalcMean_3 = MathUtils.distanceFSPL(mean_3, freqMhz);
+                    double proxCalcMedian_1 = MathUtils.distanceFSPL(median_1, freqMhz);
+                    double proxCalcMedian_2 = MathUtils.distanceFSPL(median_2, freqMhz);
+                    double proxCalcMedian_3 = MathUtils.distanceFSPL(median_3, freqMhz);
 
 
                     String writer = distance + ";" + rssiRaw
@@ -313,6 +358,7 @@ public class RssiFragment extends Fragment {
 
     /**
      * Deactivates buttons and shows a progress bar.
+     *
      * @param disable true to disable, false to enable.
      */
     private void guiDisable(boolean disable) {

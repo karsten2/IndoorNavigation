@@ -72,4 +72,6 @@
     </string-array>
 
     <string name="settings">Einstellungen</string>
+    <string name="rssi_distance_est">Abstand zum Sender</string>
+    <string name="rssi_write_to_db">Durchschn. RSS in Db schreiben</string>
 </resources>

@@ -57,4 +57,56 @@ public class MathUtils {
 
         return Math.sqrt(vectorContent);
     }
+
+    /**
+     * Function to calculate the distance in meters from dbm rssi values.
+     * http://rvmiller.com/2013/05/part-1-wifi-based-trilateration-on-android/
+     *
+     * The function is based on Free Space Path Loss, and may not work with
+     * indoor signal propagation.
+     *
+     * @param levelInDb RSSI value.
+     * @param freqInMHz Frequency of the sending device.
+     * @return Distance in meters.
+     */
+    public static double distanceFSPL(double levelInDb, double freqInMHz) {
+        double exp = (27.55 - (20 * Math.log10(freqInMHz)) + Math.abs(levelInDb)) / 20.0;
+        return Math.pow(10.0, exp);
+    }
+
+    /**
+     * Function calculates the distance from a given RSSI value.
+     *      RSSI                = -(10 * n)log_10(distance) - A     | + A
+     *      RSSI - A            = -10n * log_10(distance)           | / -10n
+     *      (RSSI - A) / -10N   = log_10(distance)
+     *      10 ^(RSSI - A) / -10N) = distance
+     *
+     * @param currentRSSI   live value from the receiver.
+     * @param A             Fix value at 1m distance.
+     * @param n             Signal propagation constant.
+     * @return              Distance in m.
+     */
+    public static double distance(double currentRSSI, double A, double n) {
+        double exp = (currentRSSI - A) / (-10 * n);
+
+        return Math.pow(10, exp);
+    }
+
+    /**
+     * Calculates the signal propagation constant, which is required for
+     * @see MathUtils#distance(double, double, double).
+     *
+     *      RSSI = -(10 * n)log_10(distance) - A
+     *      n    = - ((RSSI - A) / (10log_10(d))
+     *
+     * @param currentDistance   Distance between sender and receiver.
+     * @param currentRSSI       Current signal strength in dBm.
+     * @param A                 Recorded signal strength at 1m.
+     * @return                  Signal propagation constant.
+     */
+    public static double distancePropConst(double currentDistance,
+                                           double currentRSSI,
+                                           double A) {
+        return -((currentRSSI - A) / (10 * Math.log10(currentDistance)));
+    }
 }

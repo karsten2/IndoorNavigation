@@ -412,7 +412,7 @@ public class DroneController {
                         temp.setRssi(stat.getMedian());
 
                         //double distance = (double) ((int)Math.abs(sRegression.getPrediction(bs.getRssi())) * 10000) / 10000;
-                        double distance = (double) ((int)Math.abs(Utils.calculateDistance(bs.getRssi(), freqInMhz)) * 10000) / 10000;
+                        double distance = (double) ((int)Math.abs(MathUtils.distanceFSPL(bs.getRssi(), freqInMhz)) * 10000) / 10000;
 
                         //temp.setDistance(Utils.calculateDistance(bs.getRssi(), freqInMhz));
                         temp.setDistance(distance);

@@ -24,14 +24,22 @@
         android:layout_marginTop="20dp"
         android:layout_gravity="center"/>
 
-    <TextView
-        android:id="@+id/txtNumber"
+    <CheckBox
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
-        android:text="@string/abstand_1m"
-        android:layout_marginTop="20dp"
-        android:layout_gravity="center"/>
+        android:text="@string/rssi_write_to_db"
+        android:id="@+id/cboxRssi"
+        android:layout_gravity="center_horizontal"
+        android:layout_weight="0" />
+
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/txtDistance"
+        android:hint="@string/rssi_distance_est"
+        android:layout_gravity="center_horizontal"
+        android:inputType="number"
+        android:layout_weight="0" />
 
     <Button
         android:id="@+id/btnStart"

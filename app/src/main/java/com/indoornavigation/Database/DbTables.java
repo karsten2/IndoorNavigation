@@ -13,12 +13,12 @@ public final class DbTables {
 
     /**
      * Class that represents the table 'radiomap'.
-     *  ______________________________________________________________________________
-     * |   _ID   |   ENTRYID   |   TITLE   |   SSID   |   BSSID   |   LAT   |   LNG   |
-     * |------------------------------------------------------------------------------|
-     * |unique/pk|TEXT         |TEXT       |TEXT      |TEXT       |REAL     |REAL     |
-     * |------------------------------------------------------------------------------|
-     * |        1|             |           |   eduroam|11:22::::66|54.123456|13.123456|
+     *  ____________________________________________________
+     * |   _ID   |   SSID   |   BSSID   |   LAT   |   LNG   |
+     * |----------------------------------------------------|
+     * |unique/pk|TEXT      |TEXT       |REAL     |REAL     |
+     * |----------------------------------------------------|
+     * |        1|   eduroam|11:22::::66|54.123456|13.123456|
      *  ...
      */
     public static abstract class BaseStation implements BaseColumns {
@@ -31,6 +31,8 @@ public final class DbTables {
         public static final String COL_BSSID    = "BSSID";
         public static final String COL_LAT      = "LAT";
         public static final String COL_LNG      = "LNG";
+        public static final String COL_RSSI1M   = "RSSI_1M";
+        public static final String COL_CONST    = "CONST";
 
         public static final String COMMA_SEP = ",";
 
@@ -40,7 +42,9 @@ public final class DbTables {
                         BaseStation.COL_SSID    + TEXT_TYPE + " UNIQUE" + COMMA_SEP +
                         BaseStation.COL_BSSID   + TEXT_TYPE + COMMA_SEP +
                         BaseStation.COL_LAT     + REAL_TYPE + " NOT NULL " + COMMA_SEP +
-                        BaseStation.COL_LNG     + REAL_TYPE + " NOT NULL " + ")";
+                        BaseStation.COL_LNG     + REAL_TYPE + " NOT NULL " + COMMA_SEP +
+                        BaseStation.COL_RSSI1M  + REAL_TYPE + COMMA_SEP +
+                        BaseStation.COL_CONST   + REAL_TYPE + ")";
 
         public static final String SQL_DELETE_ENTRIES =
                 "DELETE FROM " + BaseStation.TABLE_NAME;
@@ -74,7 +78,7 @@ public final class DbTables {
                 "CREATE TABLE IF NOT EXISTS " + Radiomap_3.TABLE_NAME + " (" +
                         Radiomap_3._ID + " INTEGER PRIMARY KEY," +
                         Radiomap_3.COL_ID_MEASURING + INTEGER_TYPE + COMMA_SEP +
-                        Radiomap_3.COL_BEARING + TEXT_TYPE + COMMA_SEP +
+                        Radiomap_3.COL_BEARING + REAL_TYPE + COMMA_SEP +
                         Radiomap_3.COL_AP1_ID   + INTEGER_TYPE + COMMA_SEP +
                         Radiomap_3.COL_AP1_RSSI + REAL_TYPE + COMMA_SEP +
                         Radiomap_3.COL_AP2_ID   + INTEGER_TYPE + COMMA_SEP +
@@ -116,7 +120,7 @@ public final class DbTables {
                 "CREATE TABLE IF NOT EXISTS " + Radiomap_4.TABLE_NAME + " (" +
                         Radiomap_4._ID + " INTEGER PRIMARY KEY," +
                         Radiomap_4.COL_ID_MEASURING + INTEGER_TYPE + COMMA_SEP +
-                        Radiomap_4.COL_BEARING + TEXT_TYPE + COMMA_SEP +
+                        Radiomap_4.COL_BEARING + REAL_TYPE + COMMA_SEP +
                         Radiomap_4.COL_AP1_ID   + INTEGER_TYPE + COMMA_SEP +
                         Radiomap_4.COL_AP1_RSSI + REAL_TYPE + COMMA_SEP +
                         Radiomap_4.COL_AP2_ID   + INTEGER_TYPE + COMMA_SEP +
@@ -162,7 +166,7 @@ public final class DbTables {
                 "CREATE TABLE IF NOT EXISTS " + Radiomap_5.TABLE_NAME + " (" +
                         Radiomap_5._ID + " INTEGER PRIMARY KEY," +
                         Radiomap_5.COL_ID_MEASURING + INTEGER_TYPE + COMMA_SEP +
-                        Radiomap_5.COL_BEARING + TEXT_TYPE + COMMA_SEP +
+                        Radiomap_5.COL_BEARING + REAL_TYPE + COMMA_SEP +
                         Radiomap_5.COL_AP1_ID   + INTEGER_TYPE + COMMA_SEP +
                         Radiomap_5.COL_AP1_RSSI + REAL_TYPE + COMMA_SEP +
                         Radiomap_5.COL_AP2_ID   + INTEGER_TYPE + COMMA_SEP +
@@ -212,7 +216,7 @@ public final class DbTables {
                 "CREATE TABLE IF NOT EXISTS " + Radiomap_6.TABLE_NAME + " (" +
                         Radiomap_6._ID + " INTEGER PRIMARY KEY," +
                         Radiomap_6.COL_ID_MEASURING + INTEGER_TYPE + COMMA_SEP +
-                        Radiomap_6.COL_BEARING + TEXT_TYPE + COMMA_SEP +
+                        Radiomap_6.COL_BEARING + REAL_TYPE + COMMA_SEP +
                         Radiomap_6.COL_AP1_ID   + INTEGER_TYPE + COMMA_SEP +
                         Radiomap_6.COL_AP1_RSSI + REAL_TYPE + COMMA_SEP +
                         Radiomap_6.COL_AP2_ID   + INTEGER_TYPE + COMMA_SEP +
