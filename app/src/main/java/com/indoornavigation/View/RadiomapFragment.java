@@ -157,7 +157,9 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
 
         @Override
         public void onWifiScanlistChanged(ArrayList<BaseStation> baseStations) {
+            //Log.d(TAG, "wifi found: " + baseStations.size());
             if (write && !busy) {
+                //Log.d(TAG, "writing: " + baseStations.size());
                 updateStatistics(new ArrayList<>(baseStations));
             }
         }
@@ -370,7 +372,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
         }
 
         if (bsAdapterCheckbox == null)
-            bsAdapterCheckbox = new BsAdapterCheckbox(getContext(), baseStations);
+            bsAdapterCheckbox = new BsAdapterCheckbox(getContext(), baseStations, baseStations);
         final ListView listView = (ListView) dialogView.findViewById(R.id.listView2);
         if (listView != null) {
             listView.setAdapter(bsAdapterCheckbox);
@@ -405,7 +407,15 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
                     lastSelectedLength = tvDuration.getText().toString();
                     lastSelectedItem = spinner.getSelectedItemPosition();
 
-                    launchBarDialog(Integer.valueOf(tvDuration.getText().toString()));
+                    int duration = 60;
+
+                    try {
+                        duration = Integer.valueOf(tvDuration.getText().toString());
+                    } catch (NumberFormatException e) {
+                        Log.d(TAG, "No duration entered: " + e.getMessage());
+                    }
+
+                    launchBarDialog(duration);
                 }
             }
         });
@@ -435,11 +445,12 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
             @Override
             public void run() {
                 try {
-                    setupStatistics(selectedBaseStations, 80);
+                    setupStatistics(selectedBaseStations);
                     String mPoint = spinner.getSelectedItem().toString();
                     double bearing = Double.valueOf(tvBearing.getText().toString());
 
                     write = true;
+                    Log.d(TAG, "Start Writing");
                     int counter = 1;
                     while (counter <= duration) {
                         Thread.sleep(1000);
@@ -450,6 +461,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
                         }
                     }
                     write = false;
+                    Log.d(TAG, "stopped writing");
                     writeStatisticsToDb(mPoint, bearing);
                 } catch (Exception e) {
                     Log.e(TAG, e.getMessage());
@@ -461,13 +473,11 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
     /**
      * For every by the user selected basestation, a statistic object is created.
      * @param selectedBaseStations by the user selected.
-     * @param windowSize moving window size. Uses the last <windowSize> data to
-     *                   create the statistics.
      */
-    private void setupStatistics(ArrayList<BaseStation> selectedBaseStations, int windowSize) {
+    private void setupStatistics(ArrayList<BaseStation> selectedBaseStations) {
         selectedStatistics.clear();
         for (BaseStation bs : selectedBaseStations) {
-            selectedStatistics.put(bs.getSsid(), new Statistics(windowSize));
+            selectedStatistics.put(bs.getSsid(), new Statistics());
         }
     }
 
@@ -527,7 +537,8 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
             String currentAp = String.format("ap%s_id", i);
             String currentRss = String.format("ap%s_rssi", i);
 
-            Cursor c2 = db.rawQuery(String.format("SELECT _ID FROM radiomap WHERE SSID = '%s'",
+            Cursor c2 = db.rawQuery(String.format("SELECT _ID FROM %s WHERE SSID = '%s'",
+                    DbTables.BaseStation.TABLE_NAME,
                     results.get(i - 1).getSsid()));
             int currentId = -1;
             if (c2 != null && c2.moveToFirst())

@@ -119,7 +119,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         @Override
         public void onWifiScanlistChanged(ArrayList<BaseStation> baseStations) {
-
+            Log.d(TAG, "wifi detected: " + baseStations.size());
         }
 
         @Override

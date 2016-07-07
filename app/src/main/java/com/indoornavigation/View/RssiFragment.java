@@ -1,5 +1,6 @@
 package com.indoornavigation.View;
 
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.net.Uri;
@@ -26,6 +27,7 @@ import android.widget.Toast;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.indoornavigation.Adapter.BsAdapter;
+import com.indoornavigation.Controller.MainActivity;
 import com.indoornavigation.Database.DbTables;
 import com.indoornavigation.Database.SQLiteDBHelper;
 import com.indoornavigation.Math.MathUtils;
@@ -52,6 +54,7 @@ public class RssiFragment extends Fragment {
     private BaseStation bsFilter;
     private TextView txtFilter;
     private boolean writeToDb = false;
+    private ArrayList<BaseStation> baseStations;
 
     private int window1 = 65;
     private int window2 = 80;
@@ -86,6 +89,8 @@ public class RssiFragment extends Fragment {
         super.onCreate(savedInstanceState);
 
         db = new SQLiteDBHelper(getContext());
+
+        baseStations = db.getBaseStations();
     }
 
     DroneController.Listener mDroneControllerListener = new DroneController.Listener() {
@@ -114,6 +119,8 @@ public class RssiFragment extends Fragment {
         public void onWifiScanlistChanged(ArrayList<BaseStation> baseStations) {
             Log.d("Drone rssi", "wifi detected: " + baseStations.size());
 
+
+
             if (write && !creatingStatistics) {
                 createStatistics(new ArrayList<>(baseStations));
             }
@@ -125,7 +132,7 @@ public class RssiFragment extends Fragment {
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_rssi, container, false);
 
-        DroneController droneController = new DroneController(getContext());
+        DroneController droneController = ((MainActivity) getActivity()).mDroneController;
         droneController.setListener(mDroneControllerListener);
 
         pbar = (ProgressBar) view.findViewById(R.id.pbar);
@@ -185,14 +192,12 @@ public class RssiFragment extends Fragment {
                         statistics_2 = new Statistics(window2);
                         statistics_3 = new Statistics(window3);
 
-                        MyTask myTask = new MyTask();
-
                         try {
                             bw = getCsvWriter(String.valueOf(distance));
                         } catch (IOException e) {
                             Log.e("CSV Error", e.getMessage());
                         }
-                        myTask.execute();
+                        launchBarDialog(20);
                     } else if (distance < 0) {
                         Toast.makeText(getContext(), "Bitte eine Distanz eingeben",
                                 Toast.LENGTH_LONG).show();
@@ -207,44 +212,61 @@ public class RssiFragment extends Fragment {
         return view;
     }
 
-    private class MyTask extends AsyncTask {
-        @Override
-        protected Object doInBackground(Object[] params) {
-            Log.d("CSV", "Starte Aufzeichnung");
+    /**
+     * Dialog to show the progress of the recording.
+     *
+     * @param duration of the recording.
+     */
+    private void launchBarDialog(final int duration) {
+        final ProgressDialog progressDialog = new ProgressDialog(getContext());
+        progressDialog.setTitle("Datenaufzeichnung");
+        progressDialog.setMessage("Daten werden aufgezeichnet...");
+        progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        progressDialog.setProgress(0);
+        progressDialog.setMax(duration);
+        progressDialog.show();
 
-            write = true;
-            try {
-                Thread.sleep(3600);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    write = true;
+                    int counter = 1;
+                    while (counter <= duration) {
+                        Thread.sleep(1000);
+                        progressDialog.incrementProgressBy(1);
+                        counter++;
+                        if (progressDialog.getProgress() == progressDialog.getMax()) {
+                            progressDialog.dismiss();
+                        }
+                    }
+                    write = false;
+                    writeToDb();
+                } catch (Exception e) {
+                    Log.e(TAG, e.getMessage());
+                }
             }
-            write = false;
+        }).start();
+    }
 
-            try {
-                if (bw != null) bw.close();
-            } catch (IOException e) {
-                Log.e("CSV closing", e.getMessage());
-            }
-
-            Log.d("CSV", "Aufzeichnung beendet");
-            return null;
+    private void writeToDb() {
+        if (writeToDb) {
+            Log.d(TAG, "distanz: " + statistics_3.getMean());
+            Toast.makeText(getContext(), "Value: " + statistics_3.getMean(), Toast.LENGTH_LONG).show();
+            HashMap<String, String> values = new HashMap<>();
+            values.put(DbTables.BaseStation.COL_RSSI1M,
+                    String.valueOf(statistics_3.getMean()));
+            db.sqlUpdate(
+                    DbTables.BaseStation.TABLE_NAME,
+                    values,
+                    DbTables.BaseStation.COL_SSID + " = ?",
+                    new String[]{txtFilter.getText().toString()}
+            );
         }
     }
 
     private void writeData(String data) throws IOException {
         if (bw != null) {
-            if (writeToDb) {
-                HashMap<String, String> values = new HashMap<>();
-                values.put(DbTables.BaseStation.COL_RSSI1M,
-                        String.valueOf(statistics_3.getMean()));
-                db.sqlUpdate(
-                        DbTables.BaseStation.TABLE_NAME,
-                        values,
-                        DbTables.BaseStation.COL_SSID + " = ?",
-                        new String[]{txtFilter.getText().toString()}
-                );
-            }
-
             bw.write(data);
         }
     }
@@ -354,20 +376,6 @@ public class RssiFragment extends Fragment {
             Log.e("csv writing", e.getMessage());
             creatingStatistics = false;
         }
-    }
-
-    /**
-     * Deactivates buttons and shows a progress bar.
-     *
-     * @param disable true to disable, false to enable.
-     */
-    private void guiDisable(boolean disable) {
-        if (btnStart != null)
-            btnStart.setEnabled(!disable);
-        if (btnAddFilter != null)
-            btnAddFilter.setEnabled(!disable);
-        if (pbar != null)
-            pbar.setVisibility((disable ? View.VISIBLE : View.INVISIBLE));
     }
 
     @Override

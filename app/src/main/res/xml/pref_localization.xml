@@ -5,6 +5,6 @@
         android:title="@string/pref_localization_list"
         android:entries="@array/pref_loc_entries"
         android:entryValues="@array/pref_loc_entries_values"
-        android:defaultValue="lat"/>
+        android:defaultValue="1"/>
 
 </PreferenceScreen>

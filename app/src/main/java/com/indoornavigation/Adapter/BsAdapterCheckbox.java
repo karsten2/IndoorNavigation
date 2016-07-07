@@ -25,6 +25,12 @@ public class BsAdapterCheckbox extends ArrayAdapter<BaseStation> {
         super(context, 0, baseStations);
     }
 
+    public BsAdapterCheckbox(Context context, ArrayList<BaseStation> baseStations,
+                             ArrayList<BaseStation> selectedBaseStations) {
+        super(context, 0, baseStations);
+        this.selectedBaseStations = selectedBaseStations;
+    }
+
     @Override
     public View getView(final int position, View convertView, ViewGroup parent) {
         // Get the data item for this position

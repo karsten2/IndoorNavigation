@@ -23,6 +23,8 @@ public class BaseStation implements Serializable, Comparator<BaseStation>, Compa
     private String timeStamp;
     private int dbId;
 
+    private double rss1_1m;
+
     private static final String TAG = "BaseStation";
 
     public BaseStation() {}
@@ -144,6 +146,14 @@ public class BaseStation implements Serializable, Comparator<BaseStation>, Compa
 
     public void setDbId(int dbId) {
         this.dbId = dbId;
+    }
+
+    public double getRss1_1m() {
+        return rss1_1m;
+    }
+
+    public void setRss1_1m(double rss1_1m) {
+        this.rss1_1m = rss1_1m;
     }
 
     /**

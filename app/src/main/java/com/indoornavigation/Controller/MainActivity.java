@@ -1,6 +1,7 @@
 package com.indoornavigation.Controller;
 
 import com.indoor.navigation.indoornavigation.R;
+import com.indoornavigation.Helper.Utils;
 import com.indoornavigation.View.DroneFragment;
 import com.indoornavigation.View.MapFragment;
 import com.indoornavigation.View.RssiFragment;
@@ -56,6 +57,8 @@ public class MainActivity extends AppCompatActivity
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         if (navigationView != null) navigationView.setNavigationItemSelectedListener(this);
+
+        Log.d(TAG, "pref localization: " + Utils.getPositioningMethod(this));
 
         // Open Map.
         try {

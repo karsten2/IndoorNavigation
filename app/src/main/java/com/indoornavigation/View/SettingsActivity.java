@@ -142,10 +142,6 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 || LocalizationPreferenceFragment.class.getName().equals(fragmentName);
     }
 
-    /**
-     * This fragment shows general preferences only. It is used when the
-     * activity is showing a two-pane settings UI.
-     */
     @TargetApi(Build.VERSION_CODES.HONEYCOMB)
     public static class DatabasePreferenceFragment extends PreferenceFragment {
         @Override
@@ -192,10 +188,6 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         }
     }
 
-    /**
-     * This fragment shows notification preferences only. It is used when the
-     * activity is showing a two-pane settings UI.
-     */
     @TargetApi(Build.VERSION_CODES.HONEYCOMB)
     public static class LocalizationPreferenceFragment extends PreferenceFragment {
         @Override

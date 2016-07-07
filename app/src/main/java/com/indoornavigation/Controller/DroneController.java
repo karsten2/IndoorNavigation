@@ -277,8 +277,8 @@ public class DroneController {
 
         @Override
         public void onWifiScanListChanged(ArrayList<BaseStation> baseStations) {
-            notifyWifiScanlistChanged(baseStations);
-            //Log.d(TAG, "wifi found: " + baseStations.size());
+            notifyWifiScanlistChanged(new ArrayList<>(baseStations));
+            Log.d(TAG, "wifi found: " + baseStations.size());
 
             if (estimatePosition) {
                 if (estimatePositionTask == null ||
@@ -384,6 +384,7 @@ public class DroneController {
      * Landing the drone from outside the class.
      */
     public void EmergencyLand() {
+        this.autonomousFlight = false;
         this.droneLand();
     }
 
@@ -645,7 +646,7 @@ public class DroneController {
                     try {
                         Thread.sleep(100);
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        Log.e(TAG, e.getMessage());
                     }
                 }
 
@@ -674,7 +675,13 @@ public class DroneController {
             final double toleranceDistance = 1;
 
             while (SphericalUtil.computeDistanceBetween(
-                    currentPosition, destination.getPosition()) > toleranceDistance) ;
+                    currentPosition, destination.getPosition()) > toleranceDistance) {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    Log.e(TAG, e.getMessage());
+                }
+            }
 
             dronePitch(0, 0);
 
@@ -759,30 +766,36 @@ public class DroneController {
         @Override
         protected Object doInBackground(Object[] params) {
             if (mBebopDrone != null && droneIsFlying()) {
-                autonomousFlight = false;
-                final double bearing = Double.valueOf(params[0].toString());
-                double startAngle = currentAttitudeYaw;
-                final double tolerance = 3.5;
-                final double result = mod(bearing, 360) - mod(startAngle, 360);
+                final double tolerance = 7.5;
+                double start = -180;
 
+                while (true) {
+                    double result = start - currentAttitudeYaw;
+                    result += (result>180) ? -360 : (result< -180) ? 360 : 0;
+                    droneYaw(40 * (result < 0 ? -1 : 1));
 
-                Log.d(TAG, "droneYawTo: startAngle: " + currentAttitudeYaw + " destBearing: " + bearing
-                        + "result = " + result);
+                    while (!(currentAttitudeYaw >= start - tolerance
+                            && currentAttitudeYaw <= start + tolerance)) {
+                        try {
+                            Thread.sleep(50);
 
-                // start turning
-                droneYaw(40 * (result < 0 ? -1 : 1));
+                        } catch (InterruptedException e) {
+                            Log.e(TAG, e.getMessage());
+                        }
+                    }
+                    // end turning.
+                    droneYaw(0);
 
-                while (!(currentAttitudeYaw >= bearing - tolerance
-                        && currentAttitudeYaw <= bearing + tolerance)) {
-                    // wait until drone is in position
+                    try {
+                        Thread.sleep(2000);
+                    } catch (InterruptedException e) {
+                        Log.e(TAG, e.getMessage());
+                    }
+
+                    if (start == 180) start = -180;
+                    start += 90;
                 }
 
-                Log.d(TAG, "Drone yawed for: " + result);
-
-                // end turning.
-                droneYaw(0);
-
-                return bearing * -1;
             }
             return null;
         }
@@ -803,7 +816,7 @@ public class DroneController {
             try {
                 Thread.sleep(3000);
             } catch (InterruptedException e) {
-//
+                Log.e(TAG, e.getMessage());
             }
 
             dronePitch(0, 0);
@@ -827,8 +840,12 @@ public class DroneController {
         protected final Boolean doInBackground(ArrayList<BaseStation>... baseStations) {
             if (baseStations != null && baseStations[0] != null) {
                 try {
-                    //return getPositionFromRSS(new ArrayList<>(baseStations[0]));
-                    return getPositionFromRadiomap(baseStations[0]);
+                    switch (Utils.getPositioningMethod(context)){
+                        case 1:
+                            return getPositionFromRSS(new ArrayList<>(baseStations[0]));
+                        case 2:
+                            return getPositionFromRadiomap(baseStations[0]);
+                    }
                 } catch (Exception e) {
                     Log.e("estimate position", " " + e.getMessage());
                 }

@@ -608,7 +608,7 @@ public class BebopDrone {
                                 mBaseStation.setRssi(rssi);
                                 mBaseStation.setChannel(channel);
                                 mBaseStation.setTimeStamp(Utils.getDate(System.currentTimeMillis(), "dd.MM.yyyy hh:mm:ss.SSS"));
-                                mBaseStations.add(mBaseStation);
+                                if (! mBaseStations.contains(mBaseStation)) mBaseStations.add(mBaseStation);
                             }
                         });
                     }

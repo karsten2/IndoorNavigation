@@ -4,8 +4,10 @@ import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.wifi.ScanResult;
 import android.os.Environment;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -88,7 +90,7 @@ public abstract class Utils {
      * Create a backup of the database.
      *
      * @param context who calls the function.
-     * @param dbName Name of the database to backup. (If empty, radiomap.db is used).
+     * @param dbName  Name of the database to backup. (If empty, radiomap.db is used).
      */
     public static void exportDb(Context context, String dbName) {
         try {
@@ -122,7 +124,7 @@ public abstract class Utils {
      * Create a backup of the database.
      *
      * @param context who calls the function.
-     * @param dbName Name of the database to backup. (If empty, radiomap.db is used).
+     * @param dbName  Name of the database to backup. (If empty, radiomap.db is used).
      */
     public static void importDb(Context context, String dbName) {
         try {
@@ -150,5 +152,16 @@ public abstract class Utils {
             Log.e("Utils", e.getMessage());
             Toast.makeText(context, "Import fehlgeschlagen!", Toast.LENGTH_LONG).show();
         }
+    }
+
+    /**
+     * Gets the localization method from the shared preferences.
+     * @param context The calling context.
+     * @return int value, default 1 {@link com.indoor.navigation.indoornavigation.R.array#pref_loc_entries}.
+     */
+    public static int getPositioningMethod(Context context) {
+        SharedPreferences sharedPreferences =
+                PreferenceManager.getDefaultSharedPreferences(context);
+        return Integer.valueOf(sharedPreferences.getString("localization_type", "0"));
     }
 }

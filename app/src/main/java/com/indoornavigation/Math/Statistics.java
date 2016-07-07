@@ -15,6 +15,8 @@ public class Statistics {
     private DescriptiveStatistics stats = new DescriptiveStatistics();
     private String name = "";
 
+    public Statistics() {}
+
     public Statistics(int windowSize) {
         stats.setWindowSize(windowSize);
     }

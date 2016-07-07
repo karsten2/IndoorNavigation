@@ -4,7 +4,7 @@
     <string name="title_activity_map">Karte</string>
     <string name="title_activity_wifi">Wifi-Scanner</string>
     <string name="title_activity_drone">Drohnensteuerung</string>
-    <string name="title_activity_data">Data</string>
+    <string name="title_activity_data">RSSI Distanz</string>
     <string name="title_fragment_radiomap">Radiomap</string>
     <string name="edit_route">Route bearbeiten</string>
 
