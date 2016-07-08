@@ -156,12 +156,33 @@ public abstract class Utils {
 
     /**
      * Gets the localization method from the shared preferences.
+     *
      * @param context The calling context.
      * @return int value, default 1 {@link com.indoor.navigation.indoornavigation.R.array#pref_loc_entries}.
      */
-    public static int getPositioningMethod(Context context) {
+    public static int getPrefPositioningMethod(Context context) {
         SharedPreferences sharedPreferences =
                 PreferenceManager.getDefaultSharedPreferences(context);
         return Integer.valueOf(sharedPreferences.getString("localization_type", "0"));
+    }
+
+    /**
+     * Get the shared preference about knn from localization method.
+     *
+     * @param context The calling context.
+     * @return Integer from preferences. If not a number, return value will be 3.
+     */
+    public static int getPrefKnn(Context context) {
+        SharedPreferences sharedPreferences =
+                PreferenceManager.getDefaultSharedPreferences(context);
+        int value = 3;
+
+        try {
+            value = Integer.valueOf(sharedPreferences.getString("localization_knn", "3"));
+        } catch (NumberFormatException e) {
+            e.printStackTrace();
+        }
+
+        return value;
     }
 }

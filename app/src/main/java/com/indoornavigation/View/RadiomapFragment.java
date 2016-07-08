@@ -14,6 +14,7 @@ import android.net.Uri;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
@@ -39,11 +40,13 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.maps.android.SphericalUtil;
 import com.indoornavigation.Adapter.BsAdapterCheckbox;
 import com.indoornavigation.Adapter.WifiAdapter;
 import com.indoornavigation.Controller.DroneController;
@@ -53,10 +56,15 @@ import com.indoornavigation.Database.SQLiteDBHelper;
 import com.indoornavigation.Helper.MapUtils;
 import com.indoornavigation.Helper.ScanResultComparator;
 import com.indoor.navigation.indoornavigation.R;
+import com.indoornavigation.Helper.Utils;
 import com.indoornavigation.Math.Statistics;
 import com.indoornavigation.Model.BaseStation;
 import com.parrot.arsdk.arcontroller.ARControllerCodec;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -74,17 +82,22 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
     private ArrayList<Marker> bsMarker = new ArrayList<>();
     private ArrayList<Marker> mpMarkers = new ArrayList<>();
 
+    private double _bearing = 0.0;
+
     private ArrayList<BaseStation> baseStations = new ArrayList<>();
     private ArrayList<com.indoornavigation.Model.MeasuringPoint> measuringPoints = new ArrayList<>();
 
     private HashMap<String, Statistics> selectedStatistics = new HashMap<>();
     private ArrayList<BaseStation> selectedBaseStations;
     private boolean write = false;
+    private boolean write2 = false;
 
     private TextView tvBearing;
     private Spinner spinner;
     private BsAdapterCheckbox bsAdapterCheckbox;
     private SQLiteDBHelper db;
+
+    private Marker mMarkerDronePosition;
 
     private String lastSelectedLength;
     private int lastSelectedItem = -1;
@@ -147,13 +160,39 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
 
         @Override
         public void onBearingChangedListener(float bearing) {
+            _bearing = bearing;
             if (tvBearing != null) {
                 tvBearing.setText(String.valueOf(bearing));
             }
         }
 
         @Override
-        public void positionChangedListener(LatLng latLng) { }
+        public void positionChangedListener(LatLng latLng) {
+            BitmapDescriptor iconDrone = BitmapDescriptorFactory.fromResource(
+                    R.drawable.ic_play_arrow_red_a700_24dp);
+            if (mMarkerDronePosition != null)
+                mMarkerDronePosition.remove();
+
+            mMarkerDronePosition = mMap.addMarker(new MarkerOptions()
+                    .icon(iconDrone)
+                    .anchor(0.5f, 0.5f)
+                    .position(latLng));
+
+
+            if (write2) {
+                String data = "";
+                data += String.valueOf(Utils.getPrefKnn(getContext()));
+                data += ";" + MapUtils.currentPosition;
+                data += ";" + latLng;
+                data += ";" + SphericalUtil.computeDistanceBetween(MapUtils.currentPosition, latLng);
+                data += "\n";
+                try {
+                    writeData(data);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
 
         @Override
         public void onWifiScanlistChanged(ArrayList<BaseStation> baseStations) {
@@ -177,8 +216,10 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
 
         db = new SQLiteDBHelper(getContext());
 
+        Log.d(TAG, "create view radiomap");
         DroneController droneController = ((MainActivity) getActivity()).mDroneController;
         droneController.setListener(droneListener);
+        droneController.estimatePosition = true;
 
         View view = inflater.inflate(R.layout.fragment_radiomap, container, false);
 
@@ -199,6 +240,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
 
         FloatingActionButton fabAdd = (FloatingActionButton) view.findViewById(R.id.fabAdd);
         FloatingActionButton fabStart = (FloatingActionButton) view.findViewById(R.id.fabStart);
+        FloatingActionButton fabData = (FloatingActionButton) view.findViewById(R.id.fabData);
 
         if (fabAdd != null) {
             fabAdd.setOnClickListener(new View.OnClickListener() {
@@ -216,6 +258,21 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
                 public void onClick(View v) {
                     // Show dialog to start the measuring.
                     startMeasureDialog();
+                }
+            });
+        }
+
+        if (fabData != null) {
+            fabData.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    try {
+                        bw = getCsvWriter(String.valueOf(
+                                Utils.getPrefKnn(getContext())) + "_" + selectedMarker + "_" + String.valueOf(_bearing).substring(0,4));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    launchBarDialog2(150);
                 }
             });
         }
@@ -704,9 +761,12 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
         drawMeasuringPoint();
     }
 
+    private String selectedMarker = "";
+
     GoogleMap.OnMarkerClickListener markerClickListener = new GoogleMap.OnMarkerClickListener() {
         @Override
         public boolean onMarkerClick(Marker marker) {
+            selectedMarker = marker.getTitle();
             return false;
         }
     };
@@ -778,6 +838,88 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
             getActivity().unregisterReceiver(wifiReceiver);
         } catch (IllegalArgumentException e) {
             Log.e("wifi", "Trying to unregister not registered receiver!");
+        }
+    }
+
+
+
+    private BufferedWriter bw;
+
+    /**
+     * Function that creates a buffered writer to write to the smartphones download directory.
+     *
+     * @param fileTag Addition to the filename (Name is always: AnalysisData->fileTag<-.csv
+     * @return buffered writer.
+     * @throws IOException
+     */
+    private BufferedWriter getCsvWriter(String fileTag) throws IOException {
+        String baseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
+        String fileName = "AnalysisData_knn_" + fileTag + ".csv";
+        String filePath = baseDir + "/" + File.separator + fileName;
+        File f = new File(filePath);
+
+        FileWriter fw = new FileWriter(f, true);
+        bw = new BufferedWriter(fw);
+        String fileHeader = "KNN;tatsächliche Position;berechnete Position;Distanz\n";
+        bw.write(fileHeader);
+
+        return bw;
+    }
+
+    /**
+     * Dialog to show the progress of the recording.
+     * @param duration of the recording.
+     */
+    private void launchBarDialog2(final int duration) {
+        final ProgressDialog progressDialog = new ProgressDialog(getContext());
+        progressDialog.setTitle("Datenaufzeichnung");
+        progressDialog.setMessage("Daten werden aufgezeichnet...");
+        progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        progressDialog.setProgress(0);
+        progressDialog.setMax(duration);
+
+        progressDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                write2 = false;
+                try {
+                    bw.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                dialog.dismiss();
+                Toast.makeText(getContext(), "Aufzeichnung abgebrochen", Toast.LENGTH_SHORT);
+            }
+        });
+
+        progressDialog.show();
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    write2 = true;
+                    int counter = 1;
+                    while (counter <= duration) {
+                        Thread.sleep(1000);
+                        progressDialog.incrementProgressBy(1);
+                        counter ++;
+                        if (progressDialog.getProgress() == progressDialog.getMax()) {
+                            progressDialog.dismiss();
+                        }
+                    }
+                    write2 = false;
+                    bw.close();
+                } catch (Exception e) {
+                    Log.e(TAG, e.getMessage());
+                }
+            }
+        }).start();
+    }
+
+    private void writeData(String data) throws IOException {
+        if (bw != null) {
+            bw.write(data);
         }
     }
 }

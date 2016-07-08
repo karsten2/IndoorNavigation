@@ -282,8 +282,22 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
                 baseStation.setSsid(cursor.getString(cursor.getColumnIndexOrThrow("SSID")));
                 baseStation.setBssid(cursor.getString(cursor.getColumnIndexOrThrow("BSSID")));
 
-                double lat = cursor.getDouble(cursor.getColumnIndexOrThrow("LAT"));
-                double lng = cursor.getDouble(cursor.getColumnIndexOrThrow("LNG"));
+                double lat = cursor.getDouble(cursor.getColumnIndexOrThrow(
+                        DbTables.BaseStation.COL_LAT));
+                double lng = cursor.getDouble(cursor.getColumnIndexOrThrow(
+                        DbTables.BaseStation.COL_LNG));
+
+                try {
+                    double rssi_1m = cursor.getDouble(cursor.getColumnIndexOrThrow(
+                            DbTables.BaseStation.COL_RSSI1M));
+                    baseStation.setRss1_1m(rssi_1m);
+
+                    double _const = cursor.getDouble(cursor.getColumnIndexOrThrow(
+                            DbTables.BaseStation.COL_CONST));
+                    baseStation.setLat_const(_const);
+                } catch (IllegalArgumentException e) {
+                    Log.e(TAG, e.getMessage());
+                }
 
                 int id = cursor.getInt(cursor.getColumnIndexOrThrow("_id"));
                 baseStation.setDbId(id);

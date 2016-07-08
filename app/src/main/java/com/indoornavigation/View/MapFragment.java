@@ -38,11 +38,8 @@ import com.indoornavigation.Controller.DroneController;
 import com.indoornavigation.Controller.MainActivity;
 import com.indoornavigation.Database.SQLiteDBHelper;
 import com.indoornavigation.Helper.MapUtils;
-import com.indoornavigation.Helper.Utils;
-import com.indoornavigation.Math.Knn;
 import com.indoornavigation.Model.BaseStation;
 import com.indoornavigation.Model.CustomPolyLine;
-import com.indoornavigation.Services.WifiScanner;
 import com.parrot.arsdk.arcontroller.ARControllerCodec;
 
 import java.util.ArrayList;
@@ -53,7 +50,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     private FloatingActionButton fab;
     private FloatingActionButton fabStart;
-    private BebopVideoView bebopVideoView;
 
     private MenuItem menuCancel;
     private MenuItem menuAccept;
@@ -83,12 +79,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
 
         @Override
-        public void videoReceivedListener(ARControllerCodec codec) {
-            Log.d("Listener", "video received");
-            if (bebopVideoView != null) {
-                bebopVideoView.configureDecoder(codec);
-            }
-        }
+        public void videoReceivedListener(ARControllerCodec codec) { }
 
         @Override
         public void onDroneConnectionChangedListener(boolean connected) {
@@ -147,15 +138,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         droneController = ((MainActivity) getActivity()).mDroneController;
         droneController.setListener(mDroneControllerListener);
-        droneController.estimatePosition = true;
+        //droneController.estimatePosition = true;
 
         View view = inflater.inflate(R.layout.fragment_map, container, false);
 
         iconStart = BitmapDescriptorFactory.fromResource(R.drawable.ic_action_location_lgreen);
         iconRoute = BitmapDescriptorFactory.fromResource(R.drawable.ic_action_location_2_black);
         iconDone = BitmapDescriptorFactory.fromResource(R.drawable.ic_action_location_2_green);
-
-        bebopVideoView = (BebopVideoView) view.findViewById(R.id.videoView);
 
         fab = (FloatingActionButton) view.findViewById(R.id.fab);
         if (fab != null) {
@@ -175,8 +164,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 public void onClick(View v) {
                     droneController.EmergencyLand();
                     fabStart.setVisibility(View.VISIBLE);
-
-                    Knn.main();
                 }
             });
         }
@@ -378,28 +365,21 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     @Override
     public void onPause() {
         super.onPause();
-
-        Utils.stopService(WifiScanner.class, getActivity());
     }
 
     @Override
     public void onStop() {
         super.onStop();
-
-        Utils.stopService(WifiScanner.class, getActivity());
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        Utils.stopService(WifiScanner.class, getActivity());
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-
-        Utils.stopService(WifiScanner.class, getActivity());
     }
 
     @Override

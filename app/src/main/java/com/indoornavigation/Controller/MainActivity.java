@@ -1,8 +1,6 @@
 package com.indoornavigation.Controller;
 
 import com.indoor.navigation.indoornavigation.R;
-import com.indoornavigation.Helper.Utils;
-import com.indoornavigation.View.DroneFragment;
 import com.indoornavigation.View.MapFragment;
 import com.indoornavigation.View.RssiFragment;
 import com.indoornavigation.View.SettingsActivity;
@@ -31,7 +29,6 @@ public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
         MapFragment.OnFragmentInteractionListener,
         RadiomapFragment.OnFragmentInteractionListener,
-        DroneFragment.OnFragmentInteractionListener,
         RssiFragment.OnFragmentInteractionListener {
 
     private static final String TAG = "MainActivity";
@@ -57,8 +54,6 @@ public class MainActivity extends AppCompatActivity
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         if (navigationView != null) navigationView.setNavigationItemSelectedListener(this);
-
-        Log.d(TAG, "pref localization: " + Utils.getPositioningMethod(this));
 
         // Open Map.
         try {
@@ -133,7 +128,9 @@ public class MainActivity extends AppCompatActivity
                 fragment = MapFragment.class.newInstance();
                 if (actionBar != null) actionBar.setTitle(R.string.title_activity_map);
             } else if (id == R.id.nav_radiomap) {
-                fragment = RadiomapFragment.class.newInstance();
+                Log.d(TAG, "loading radiomap");
+                fragment = new RadiomapFragment();
+
                 if (actionBar != null) actionBar.setTitle(R.string.title_fragment_radiomap);
             } else if (id == R.id.nav_data) {
                 fragment = RssiFragment.class.newInstance();
@@ -143,7 +140,7 @@ public class MainActivity extends AppCompatActivity
             }
 
             FragmentManager fragmentManager = getSupportFragmentManager();
-            fragmentManager.beginTransaction().remove(lastFragment).commit();
+            //fragmentManager.beginTransaction().remove(lastFragment).commit();
             fragmentManager.beginTransaction().replace(R.id.flContent, fragment).commit();
 
             lastFragment = fragment;

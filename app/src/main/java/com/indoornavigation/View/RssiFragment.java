@@ -4,7 +4,7 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.net.Uri;
-import android.os.AsyncTask;
+
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v4.app.Fragment;
@@ -17,8 +17,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -31,7 +29,6 @@ import com.indoornavigation.Controller.MainActivity;
 import com.indoornavigation.Database.DbTables;
 import com.indoornavigation.Database.SQLiteDBHelper;
 import com.indoornavigation.Math.MathUtils;
-import com.indoornavigation.Math.SRegression;
 import com.indoornavigation.Math.Statistics;
 import com.parrot.arsdk.arcontroller.ARControllerCodec;
 import com.indoornavigation.Controller.DroneController;
@@ -53,7 +50,6 @@ public class RssiFragment extends Fragment {
     private BsAdapter bsAdapter;
     private BaseStation bsFilter;
     private TextView txtFilter;
-    private boolean writeToDb = false;
     private ArrayList<BaseStation> baseStations;
 
     private int window1 = 65;
@@ -117,8 +113,7 @@ public class RssiFragment extends Fragment {
 
         @Override
         public void onWifiScanlistChanged(ArrayList<BaseStation> baseStations) {
-            Log.d("Drone rssi", "wifi detected: " + baseStations.size());
-
+            //Log.d(TAG, "wifi detected: " + baseStations.size());
 
 
             if (write && !creatingStatistics) {
@@ -143,16 +138,6 @@ public class RssiFragment extends Fragment {
                 @Override
                 public void onClick(View v) {
                     wifiDialog();
-                }
-            });
-        }
-
-        CheckBox cboxDb = (CheckBox) view.findViewById(R.id.cboxRssi);
-        if (cboxDb != null) {
-            cboxDb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    writeToDb = isChecked;
                 }
             });
         }
@@ -187,7 +172,7 @@ public class RssiFragment extends Fragment {
                 @Override
                 public void onClick(View v) {
 
-                    if (distance >= 0 && ((writeToDb && distance == 1) || !writeToDb)) {
+                    if (distance >= 0) {
                         statistics_1 = new Statistics(window1);
                         statistics_2 = new Statistics(window2);
                         statistics_3 = new Statistics(window3);
@@ -197,13 +182,10 @@ public class RssiFragment extends Fragment {
                         } catch (IOException e) {
                             Log.e("CSV Error", e.getMessage());
                         }
-                        launchBarDialog(20);
+                        launchBarDialog(30);
                     } else if (distance < 0) {
                         Toast.makeText(getContext(), "Bitte eine Distanz eingeben",
                                 Toast.LENGTH_LONG).show();
-                    } else if (writeToDb && distance != 1) {
-                        Toast.makeText(getContext(), "Um Daten in der Datenbank zu hinterlegen, " +
-                                "muss der Abstand 1m betragen", Toast.LENGTH_LONG).show();
                     }
                 }
             });
@@ -241,7 +223,7 @@ public class RssiFragment extends Fragment {
                         }
                     }
                     write = false;
-                    writeToDb();
+                    writeToDb(distance);
                 } catch (Exception e) {
                     Log.e(TAG, e.getMessage());
                 }
@@ -249,20 +231,35 @@ public class RssiFragment extends Fragment {
         }).start();
     }
 
-    private void writeToDb() {
-        if (writeToDb) {
-            Log.d(TAG, "distanz: " + statistics_3.getMean());
-            Toast.makeText(getContext(), "Value: " + statistics_3.getMean(), Toast.LENGTH_LONG).show();
-            HashMap<String, String> values = new HashMap<>();
+    private void writeToDb(double mode) {
+        HashMap<String, String> values = new HashMap<>();
+
+        if (mode == 1) {
+            Log.d(TAG, "write rssi_1m to db: " + statistics_3.getMean());
             values.put(DbTables.BaseStation.COL_RSSI1M,
                     String.valueOf(statistics_3.getMean()));
-            db.sqlUpdate(
-                    DbTables.BaseStation.TABLE_NAME,
-                    values,
-                    DbTables.BaseStation.COL_SSID + " = ?",
-                    new String[]{txtFilter.getText().toString()}
-            );
+        } else {
+            BaseStation bs = new BaseStation();
+            for (BaseStation baseStation : baseStations) {
+                if (baseStation.getSsid().equals(txtFilter.getText().toString())) {
+                    bs = baseStation;
+                    break;
+                }
+            }
+            double rssi_1m = bs.getRss1_1m();
+            values.put(DbTables.BaseStation.COL_CONST,
+                    String.valueOf(MathUtils.distancePropConst(
+                            distance, statistics_3.getMean(), rssi_1m)));
+            Log.d(TAG, "write const to db: " + values.get(DbTables.BaseStation.COL_CONST));
         }
+
+        db.sqlUpdate(
+                DbTables.BaseStation.TABLE_NAME,
+                values,
+                DbTables.BaseStation.COL_SSID + " = ?",
+                new String[]{txtFilter.getText().toString()}
+        );
+
     }
 
     private void writeData(String data) throws IOException {
@@ -320,62 +317,15 @@ public class RssiFragment extends Fragment {
     }
 
     private void createStatistics(ArrayList<BaseStation> baseStations) {
-        try {
-            creatingStatistics = true;
-            for (BaseStation bs : baseStations) {
-                if (bsFilter != null && bsFilter.getSsid() != null && bsFilter.getSsid().equals(bs.getSsid())) {
-                    double rssiRaw = bs.getRssi();
-                    double freqMhz = 2412;
-
-                    SRegression sRegression = new SRegression(true);
-
-                    statistics_1.add(bs.getRssi());
-                    statistics_2.add(bs.getRssi());
-                    statistics_3.add(bs.getRssi());
-
-                    double mean_1 = statistics_1.getMean();
-                    double mean_2 = statistics_2.getMean();
-                    double mean_3 = statistics_3.getMean();
-
-                    double median_1 = statistics_1.getMedian();
-                    double median_2 = statistics_2.getMedian();
-                    double median_3 = statistics_3.getMedian();
-
-                    double predictionRaw = sRegression.getPrediction(rssiRaw);
-                    double predictionMean_1 = sRegression.getPrediction(mean_1);
-                    double predictionMean_2 = sRegression.getPrediction(mean_2);
-                    double predictionMean_3 = sRegression.getPrediction(mean_3);
-                    double predictionMedian_1 = sRegression.getPrediction(median_1);
-                    double predictionMedian_2 = sRegression.getPrediction(median_2);
-                    double predictionMedian_3 = sRegression.getPrediction(median_3);
-
-                    double proxCalcRaw = MathUtils.distanceFSPL(rssiRaw, freqMhz);
-                    double proxCalcMean_1 = MathUtils.distanceFSPL(mean_1, freqMhz);
-                    double proxCalcMean_2 = MathUtils.distanceFSPL(mean_2, freqMhz);
-                    double proxCalcMean_3 = MathUtils.distanceFSPL(mean_3, freqMhz);
-                    double proxCalcMedian_1 = MathUtils.distanceFSPL(median_1, freqMhz);
-                    double proxCalcMedian_2 = MathUtils.distanceFSPL(median_2, freqMhz);
-                    double proxCalcMedian_3 = MathUtils.distanceFSPL(median_3, freqMhz);
-
-
-                    String writer = distance + ";" + rssiRaw
-                            + ";" + mean_1 + ";" + mean_2 + ";" + mean_3
-                            + ";" + median_1 + ";" + median_2 + ";" + median_3
-                            + ";" + predictionRaw
-                            + ";" + predictionMean_1 + ";" + predictionMean_2 + ";" + predictionMean_3
-                            + ";" + predictionMedian_1 + ";" + predictionMedian_2 + ";" + predictionMedian_3
-                            + ";" + proxCalcRaw
-                            + ";" + proxCalcMean_1 + ";" + proxCalcMean_2 + ";" + proxCalcMean_3
-                            + ";" + proxCalcMedian_1 + ";" + proxCalcMedian_2 + ";" + proxCalcMedian_3;
-
-                    writeData(";" + bs.toString() + writer + "\n");
-                }
+        creatingStatistics = true;
+        for (BaseStation bs : baseStations) {
+            if (bsFilter != null && bsFilter.getSsid() != null && bsFilter.getSsid().equals(bs.getSsid())) {
+                statistics_1.add(bs.getRssi());
+                statistics_2.add(bs.getRssi());
+                statistics_3.add(bs.getRssi());
             }
-            creatingStatistics = false;
-        } catch (IOException e) {
-            Log.e("csv writing", e.getMessage());
-            creatingStatistics = false;
         }
+        creatingStatistics = false;
     }
 
     @Override

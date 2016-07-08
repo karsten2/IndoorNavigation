@@ -7,4 +7,10 @@
         android:entryValues="@array/pref_loc_entries_values"
         android:defaultValue="1"/>
 
+    <EditTextPreference
+        android:key="localization_knn"
+        android:title="Naheste Nachbarn"
+        android:summary="Anzahl der nahesten zu suchenden Nachbarn"
+        android:defaultValue="3"/>
+
 </PreferenceScreen>

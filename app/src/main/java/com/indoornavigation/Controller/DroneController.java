@@ -14,9 +14,8 @@ import com.indoornavigation.Database.SQLiteDBHelper;
 import com.indoornavigation.Drone.BebopDrone;
 import com.indoornavigation.Drone.DroneDiscoverer;
 import com.indoornavigation.Helper.Utils;
-import com.indoornavigation.Math.Lateration_old;
+import com.indoornavigation.Math.Trilateration;
 import com.indoornavigation.Math.MathUtils;
-import com.indoornavigation.Math.SRegression;
 import com.indoornavigation.Math.Statistics;
 import com.indoornavigation.Model.BaseStation;
 import com.indoornavigation.Model.CustomVector;
@@ -395,8 +394,6 @@ public class DroneController {
      * @return true if the position changed, false otherwise.
      */
     private boolean getPositionFromRSS(ArrayList<BaseStation> baseStations) {
-        SRegression sRegression = new SRegression(true);
-        double freqInMhz = 2457;
         ArrayList<BaseStation> foundBaseStations = new ArrayList<>();
 
         // smooth rssi data for every baseStation
@@ -412,10 +409,14 @@ public class DroneController {
                         stat.add(bs.getRssi());
                         temp.setRssi(stat.getMedian());
 
-                        //double distance = (double) ((int)Math.abs(sRegression.getPrediction(bs.getRssi())) * 10000) / 10000;
-                        double distance = (double) ((int)Math.abs(MathUtils.distanceFSPL(bs.getRssi(), freqInMhz)) * 10000) / 10000;
+                        double distance = -1;
+                        try {
+                            distance = MathUtils.distance(
+                                    bs.getRssi(), bs.getRss1_1m(), bs.getLat_const());
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
 
-                        //temp.setDistance(Utils.calculateDistance(bs.getRssi(), freqInMhz));
                         temp.setDistance(distance);
                         foundBaseStations.add(temp);
                         break;
@@ -433,7 +434,7 @@ public class DroneController {
         // laterate Position.
         try {
             //Log.d(TAG, "basestations in database found: " + foundBaseSations.size());
-            LatLng newPosition = Lateration_old.calculatePosition(foundBaseStations);
+            LatLng newPosition = Trilateration.calculatePosition(foundBaseStations);
             if (!newPosition.equals(new LatLng(0, 0)) && !newPosition.equals(currentPosition)) {
 
                 droneStatisticsLat.add(newPosition.latitude);
@@ -515,9 +516,13 @@ public class DroneController {
                 }
 
                 // find the N smallest values:
-                int N = 4;
+                int N = Utils.getPrefKnn(context);
                 Collections.sort(vectorDifferences);
-                LatLng newPosition = averageLatLng(vectorDifferences.subList(0, N));
+                LatLng newPosition;
+                if (N > vectorDifferences.size())
+                    newPosition = averageLatLng(vectorDifferences);
+                else
+                    newPosition = averageLatLng(vectorDifferences.subList(0, N));
 
                 if (!newPosition.equals(new LatLng(0, 0)) && !newPosition.equals(currentPosition)) {
 
@@ -840,7 +845,7 @@ public class DroneController {
         protected final Boolean doInBackground(ArrayList<BaseStation>... baseStations) {
             if (baseStations != null && baseStations[0] != null) {
                 try {
-                    switch (Utils.getPositioningMethod(context)){
+                    switch (Utils.getPrefPositioningMethod(context)){
                         case 1:
                             return getPositionFromRSS(new ArrayList<>(baseStations[0]));
                         case 2:

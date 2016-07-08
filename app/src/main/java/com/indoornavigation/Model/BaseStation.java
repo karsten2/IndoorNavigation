@@ -24,6 +24,7 @@ public class BaseStation implements Serializable, Comparator<BaseStation>, Compa
     private int dbId;
 
     private double rss1_1m;
+    private double lat_const;
 
     private static final String TAG = "BaseStation";
 
@@ -154,6 +155,14 @@ public class BaseStation implements Serializable, Comparator<BaseStation>, Compa
 
     public void setRss1_1m(double rss1_1m) {
         this.rss1_1m = rss1_1m;
+    }
+
+    public double getLat_const() {
+        return lat_const;
+    }
+
+    public void setLat_const(double lat_const) {
+        this.lat_const = lat_const;
     }
 
     /**
