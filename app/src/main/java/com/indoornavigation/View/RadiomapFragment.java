@@ -878,6 +878,8 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
 
         baseStations = db.getBaseStations();
         drawBaseStation();
+
+        MapUtils.addGroundOverlay(mMap);
     }
 
 

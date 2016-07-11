@@ -195,7 +195,7 @@ public class DroneController {
                 mBebopDrone = new BebopDrone(context, service);
                 mBebopDrone.addListener(mBebopListener);
                 if (mBebopDrone.connect()) {
-                    //handler.postDelayed(runnable, 2000);
+                    mBebopDrone.setWifiBandToAll();
                     runnable.run();
                     notifyDroneConnected(true);
                 }
@@ -759,6 +759,7 @@ public class DroneController {
                 droneDiscoverer.stopDiscovering();
                 droneDiscoverer.cleanup();
                 droneDiscoverer.removeListener(mDiscovererListener);
+                this.mListener.clear();
             }
 
             db.close();
