@@ -14,6 +14,9 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -63,6 +66,7 @@ public class RssiFragment extends Fragment {
                     + ";PROX_CALC_MEDIAN_%1$s;PROX_CALC_MEDIAN_%2$s;PROX_CALC_MEDIAN_%3$s\n", window1, window2, window3);
     private BufferedWriter bw;
     private SQLiteDBHelper db;
+    private MenuItem menuDroneConnectionState;
 
     private double distance = -1.0;
 
@@ -84,9 +88,17 @@ public class RssiFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        db = new SQLiteDBHelper(getContext());
+        setHasOptionsMenu(true);
 
+        db = new SQLiteDBHelper(getContext());
         baseStations = db.getBaseStations();
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+
+        menuDroneConnectionState = menu.findItem(R.id.action_connectionState);
     }
 
     DroneController.Listener mDroneControllerListener = new DroneController.Listener() {
@@ -100,6 +112,13 @@ public class RssiFragment extends Fragment {
 
         @Override
         public void onDroneConnectionChangedListener(boolean connected) {
+            if (menuDroneConnectionState != null) {
+                if (connected) {
+                    menuDroneConnectionState.setIcon(R.drawable.ic_drone_connected);
+                } else {
+                    menuDroneConnectionState.setIcon(R.drawable.ic_drone_disconnected);
+                }
+            }
         }
 
         @Override

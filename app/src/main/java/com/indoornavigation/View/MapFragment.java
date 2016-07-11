@@ -151,7 +151,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             fab.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    getBaseStations();
+                    db.getBaseStations();
                     addRoute();
                 }
             });
@@ -306,7 +306,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
      * Function to get all Access points from the database and draw them on the map.
      */
     private void drawAccessPoints() {
-        for (BaseStation baseStation : getBaseStations()) {
+        for (BaseStation baseStation : db.getBaseStations()) {
             mMap.addMarker(new MarkerOptions()
                     .position(baseStation.getLatLng())
                     .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_router))
@@ -349,17 +349,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         if (getView() != null) {
             Snackbar.make(
-                    getView(), "Tap on the map to create a route.", Snackbar.LENGTH_LONG).show();
+                    getView(), "Karte berühren, um Punkte zur Route hinzuzufügen.", Snackbar.LENGTH_LONG).show();
         }
-    }
-
-    /**
-     * Function to get all base stations from the database.
-     *
-     * @return List with all base stations.
-     */
-    private ArrayList<BaseStation> getBaseStations() {
-        return db.getBaseStations();
     }
 
     @Override

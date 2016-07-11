@@ -59,6 +59,7 @@ import com.indoor.navigation.indoornavigation.R;
 import com.indoornavigation.Helper.Utils;
 import com.indoornavigation.Math.Statistics;
 import com.indoornavigation.Model.BaseStation;
+import com.indoornavigation.Model.MeasuringPoint;
 import com.parrot.arsdk.arcontroller.ARControllerCodec;
 
 import java.io.BufferedWriter;
@@ -120,7 +121,10 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
     };
 
     @Override
-    public void onCreate(Bundle savedInstanceState) { super.onCreate(savedInstanceState); }
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setHasOptionsMenu(true);
+    }
 
     private BroadcastReceiver wifiReceiver = new BroadcastReceiver() {
         @Override
@@ -182,11 +186,13 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
             if (write2) {
                 String data = "";
                 data += String.valueOf(Utils.getPrefKnn(getContext()));
-                data += ";" + MapUtils.currentPosition;
+                data += ";" + testPoints.get(temp2).getLatLng();
                 data += ";" + latLng;
-                data += ";" + SphericalUtil.computeDistanceBetween(MapUtils.currentPosition, latLng);
+                data += ";" + SphericalUtil.computeDistanceBetween(
+                        testPoints.get(temp2).getLatLng(), latLng);
                 data += "\n";
                 try {
+                    Log.d(TAG, "Point: " + testPoints.get(temp2).getName());
                     writeData(data);
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -196,7 +202,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
 
         @Override
         public void onWifiScanlistChanged(ArrayList<BaseStation> baseStations) {
-            //Log.d(TAG, "wifi found: " + baseStations.size());
+            Log.d(TAG, "wifi found: " + baseStations.size());
             if (write && !busy) {
                 //Log.d(TAG, "writing: " + baseStations.size());
                 updateStatistics(new ArrayList<>(baseStations));
@@ -215,11 +221,10 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
                              Bundle savedInstanceState) {
 
         db = new SQLiteDBHelper(getContext());
+        notifyMeasurementPointsChanged();
+        prepareTest();
 
         Log.d(TAG, "create view radiomap");
-        DroneController droneController = ((MainActivity) getActivity()).mDroneController;
-        droneController.setListener(droneListener);
-        droneController.estimatePosition = true;
 
         View view = inflater.inflate(R.layout.fragment_radiomap, container, false);
 
@@ -266,13 +271,34 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
             fabData.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    try {
-                        bw = getCsvWriter(String.valueOf(
-                                Utils.getPrefKnn(getContext())) + "_" + selectedMarker + "_" + String.valueOf(_bearing).substring(0,4));
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                    if (temp2 == -1) {
+                        Toast.makeText(getContext(), "Starte test", Toast.LENGTH_SHORT).show();
+                        try {
+                            bw = getCsvWriter(String.valueOf(
+                                    Utils.getPrefKnn(getContext())) + "_route_" + String.valueOf(_bearing).substring(0, 4));
+                        } catch (IOException e) {
+                            Log.e(TAG, e.getMessage());
+                        }
+                        temp2 ++;
+                        write2 = true;
+                    } else {
+                        temp2 ++;
+                        Toast.makeText(getContext(), "Point: " + temp2, Toast.LENGTH_SHORT).show();
+
+                        if (temp2 == testPoints.size()) {
+                            Toast.makeText(getContext(), "Test beendet", Toast.LENGTH_SHORT).show();
+                            write2 = false;
+                            temp2 = -1;
+                            try {
+                                bw.close();
+                            } catch (IOException e) {
+                                Log.e(TAG, e.getMessage());
+                            }
+                        }
                     }
-                    launchBarDialog2(150);
+
+
+                    //launchBarDialog2(150);
                 }
             });
         }
@@ -285,6 +311,25 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
 
         return view;
     }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        DroneController droneController = ((MainActivity) getActivity()).mDroneController;
+        droneController.setListener(droneListener);
+        droneController.estimatePosition = true;
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+
+        DroneController droneController = ((MainActivity) getActivity()).mDroneController;
+        droneController.removeListener(droneListener);
+    }
+
+    private int temp2 = -1;
 
     /**
      * Dialog to chose the users action.
@@ -765,8 +810,35 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
 
     GoogleMap.OnMarkerClickListener markerClickListener = new GoogleMap.OnMarkerClickListener() {
         @Override
-        public boolean onMarkerClick(Marker marker) {
+        public boolean onMarkerClick(final Marker marker) {
+            if (marker.getTitle().equals(selectedMarker)) {
+                AlertDialog.Builder dialog = new AlertDialog.Builder(getContext());
+                dialog.setTitle("Marker Löschen");
+                dialog.setMessage("Möchten Sie den ausgewählten Marker löschen?");
+                dialog.setNegativeButton("Abbrechen", null);
+                dialog.setPositiveButton("Okay", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        try {
+                            db.sqlDelete(DbTables.BaseStation.TABLE_NAME,
+                                    DbTables.BaseStation.COL_SSID + " = ?",
+                                    new String[]{marker.getTitle()});
+                            db.sqlDelete(DbTables.MeasuringPoint.TABLE_NAME,
+                                    DbTables.MeasuringPoint.COL_NAME + " = ?",
+                                    new String[]{marker.getTitle()});
+
+                            redrawMap();
+                        } catch (Exception e) {
+                            Log.e(TAG, e.getMessage());
+                        }
+                    }
+                });
+
+                dialog.show();
+            }
+
             selectedMarker = marker.getTitle();
+
             return false;
         }
     };
@@ -799,11 +871,15 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
         }
     };
 
-    private void deleteMarker(Marker marker) {
-        if (mpMarkers.contains(marker)) {
-            mpMarkers.remove(marker);
-        }
+    private void redrawMap() {
+        mMap.clear();
+        measuringPoints = db.getMeasuringPoints();
+        drawMeasuringPoint();
+
+        baseStations = db.getBaseStations();
+        drawBaseStation();
     }
+
 
     /**
      * This interface must be implemented by activities that contain this
@@ -920,6 +996,23 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
     private void writeData(String data) throws IOException {
         if (bw != null) {
             bw.write(data);
+        }
+    }
+
+    private ArrayList<MeasuringPoint> testPoints = new ArrayList<>();
+    private void prepareTest() {
+        String[] points = new String[]{
+                "p16", "p17", "p18", "p19", "p20",
+                "p7", "p30", "p29", "p28", "p27", "p26"
+        };
+
+        for (String point : points) {
+            for (MeasuringPoint mp : measuringPoints) {
+                if (mp.getName().equals(point)) {
+                    testPoints.add(mp);
+                    break;
+                }
+            }
         }
     }
 }

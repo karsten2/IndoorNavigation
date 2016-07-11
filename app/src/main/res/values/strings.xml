@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Indoor Navigation</string>
     <string name="title_activity_main">Indoor Navigation</string>
-    <string name="title_activity_map">Karte</string>
+    <string name="title_activity_map">Indoor Navigation</string>
     <string name="title_activity_wifi">Wifi-Scanner</string>
     <string name="title_activity_drone">Drohnensteuerung</string>
     <string name="title_activity_data">RSSI Distanz</string>

@@ -287,17 +287,21 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
                 double lng = cursor.getDouble(cursor.getColumnIndexOrThrow(
                         DbTables.BaseStation.COL_LNG));
 
+                double rssi_1m = 1;
+                double _const = -1;
                 try {
-                    double rssi_1m = cursor.getDouble(cursor.getColumnIndexOrThrow(
+                    rssi_1m = cursor.getDouble(cursor.getColumnIndexOrThrow(
                             DbTables.BaseStation.COL_RSSI1M));
-                    baseStation.setRss1_1m(rssi_1m);
 
-                    double _const = cursor.getDouble(cursor.getColumnIndexOrThrow(
+                    _const = cursor.getDouble(cursor.getColumnIndexOrThrow(
                             DbTables.BaseStation.COL_CONST));
-                    baseStation.setLat_const(_const);
+
                 } catch (IllegalArgumentException e) {
                     Log.e(TAG, e.getMessage());
                 }
+
+                baseStation.setRss1_1m(rssi_1m);
+                baseStation.setLat_const(_const);
 
                 int id = cursor.getInt(cursor.getColumnIndexOrThrow("_id"));
                 baseStation.setDbId(id);

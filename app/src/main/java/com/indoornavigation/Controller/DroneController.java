@@ -93,6 +93,11 @@ public class DroneController {
         mListener.add(listener);
     }
 
+    public void removeListener(Listener listener) {
+        if (mListener != null)
+            mListener.remove(listener);
+    }
+
     /**
      * Event fires when a marker is added to array routeDone.
      *
@@ -170,8 +175,10 @@ public class DroneController {
     Runnable runnable = new Runnable() {
         @Override
         public void run() {
-            mBebopDrone.scanWifi();
-            handler.postDelayed(runnable, 5000);
+            if (mBebopDrone != null) {
+                mBebopDrone.scanWifi();
+                handler.postDelayed(runnable, 3000);
+            }
         }
     };
 
@@ -188,6 +195,7 @@ public class DroneController {
                 mBebopDrone = new BebopDrone(context, service);
                 mBebopDrone.addListener(mBebopListener);
                 if (mBebopDrone.connect()) {
+                    //handler.postDelayed(runnable, 2000);
                     runnable.run();
                     notifyDroneConnected(true);
                 }
@@ -204,6 +212,7 @@ public class DroneController {
             switch (state) {
                 case ARCONTROLLER_DEVICE_STATE_RUNNING:
                     notifyDroneConnected(true);
+                    //handler.postDelayed(runnable, 2000);
                     break;
                 case ARCONTROLLER_DEVICE_STATE_STOPPED:
                     notifyDroneConnected(false);
@@ -277,7 +286,7 @@ public class DroneController {
         @Override
         public void onWifiScanListChanged(ArrayList<BaseStation> baseStations) {
             notifyWifiScanlistChanged(new ArrayList<>(baseStations));
-            Log.d(TAG, "wifi found: " + baseStations.size());
+            Log.d(TAG, "wifi found: " +baseStations.size());
 
             if (estimatePosition) {
                 if (estimatePositionTask == null ||
@@ -411,8 +420,9 @@ public class DroneController {
 
                         double distance = -1;
                         try {
-                            distance = MathUtils.distance(
-                                    bs.getRssi(), bs.getRss1_1m(), bs.getLat_const());
+                            if (temp.getRss1_1m() != 1 && temp.getLat_const() != -1)
+                                distance = MathUtils.distance(
+                                        temp.getRssi(), temp.getRss1_1m(), temp.getLat_const());
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -433,7 +443,11 @@ public class DroneController {
 
         // laterate Position.
         try {
-            //Log.d(TAG, "basestations in database found: " + foundBaseSations.size());
+            for (int i = foundBaseStations.size() - 1; i >= 0; i--) {
+                if (foundBaseStations.get(i).getDistance() == -1) {
+                    foundBaseStations.remove(i);
+                }
+            }
             LatLng newPosition = Trilateration.calculatePosition(foundBaseStations);
             if (!newPosition.equals(new LatLng(0, 0)) && !newPosition.equals(currentPosition)) {
 

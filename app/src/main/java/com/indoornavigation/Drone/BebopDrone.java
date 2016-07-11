@@ -297,11 +297,14 @@ public class BebopDrone {
     }
 
     public void scanWifi() {
-        ARCOMMANDS_ARDRONE3_NETWORK_WIFISCAN_BAND_ENUM band =
+        ARCOMMANDS_ARDRONE3_NETWORK_WIFISCAN_BAND_ENUM band = //ARCOMMANDS_ARDRONE3_NETWORK_WIFISCAN_BAND_ENUM.ARCOMMANDS_ARDRONE3_NETWORK_WIFISCAN_BAND_2_4GHZ;
                 ARCOMMANDS_ARDRONE3_NETWORK_WIFISCAN_BAND_ENUM.ARCOMMANDS_ARDRONE3_NETWORK_WIFISCAN_BAND_ALL;
 
+
         if (mDeviceController != null) {
-            mDeviceController.getFeatureARDrone3().sendNetworkWifiScan(band);
+            ARCONTROLLER_ERROR_ENUM error;
+            error = mDeviceController.getFeatureARDrone3().sendNetworkWifiScan(band);
+            Log.d(TAG, error.toString());
         }
     }
 
@@ -538,6 +541,37 @@ public class BebopDrone {
         @Override
         public void onCommandReceived(ARDeviceController deviceController, ARCONTROLLER_DICTIONARY_KEY_ENUM commandKey, ARControllerDictionary elementDictionary) {
             // if event received is the battery update
+
+            if ((commandKey == ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_NETWORKSTATE_WIFISCANLISTCHANGED) && (elementDictionary != null)){
+                mBaseStations.clear();
+                for (ARControllerArgumentDictionary<Object> args : elementDictionary.values()) {
+                    if (args != null) {
+                        final String ssid = (String) args.get(ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_NETWORKSTATE_WIFISCANLISTCHANGED_SSID);
+                        final short rssi = (short) ((Integer) args.get(ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_NETWORKSTATE_WIFISCANLISTCHANGED_RSSI)).intValue();
+                        ARCOMMANDS_ARDRONE3_NETWORKSTATE_WIFISCANLISTCHANGED_BAND_ENUM band = ARCOMMANDS_ARDRONE3_NETWORKSTATE_WIFISCANLISTCHANGED_BAND_ENUM.getFromValue((Integer) args.get(ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_NETWORKSTATE_WIFISCANLISTCHANGED_BAND));
+                        final byte channel = (byte) ((Integer) args.get(ARFeatureARDrone3.ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_NETWORKSTATE_WIFISCANLISTCHANGED_CHANNEL)).intValue();
+                        mHandler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                BaseStation mBaseStation = new BaseStation();
+                                mBaseStation.setSsid(ssid);
+                                mBaseStation.setRssi(rssi);
+                                mBaseStation.setChannel(channel);
+                                mBaseStation.setTimeStamp(Utils.getDate(System.currentTimeMillis(), "dd.MM.yyyy hh:mm:ss.SSS"));
+                                if (! mBaseStations.contains(mBaseStation)) mBaseStations.add(mBaseStation);
+                            }
+                        });
+                    }
+                }
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        notifyWifiScanListChanged(mBaseStations);
+                        Log.d(TAG, "wifi scanlist changed: " + mBaseStations.size());
+                    }
+                });
+            }
+
             if ((commandKey == ARCONTROLLER_DICTIONARY_KEY_ENUM.ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_BATTERYSTATECHANGED) && (elementDictionary != null)) {
                 ARControllerArgumentDictionary<Object> args = elementDictionary.get(ARControllerDictionary.ARCONTROLLER_DICTIONARY_SINGLE_KEY);
                 if (args != null) {
