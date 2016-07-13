@@ -201,7 +201,7 @@ public class RssiFragment extends Fragment {
                         } catch (IOException e) {
                             Log.e("CSV Error", e.getMessage());
                         }
-                        launchBarDialog(30);
+                        launchBarDialog(60);
                     } else if (distance < 0) {
                         Toast.makeText(getContext(), "Bitte eine Distanz eingeben",
                                 Toast.LENGTH_LONG).show();

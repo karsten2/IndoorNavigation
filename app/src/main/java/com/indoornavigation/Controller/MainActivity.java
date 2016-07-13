@@ -82,11 +82,16 @@ public class MainActivity extends AppCompatActivity
                         public void onClick(DialogInterface dialog, int which) {
                             mDroneController.destroy();
                             MainActivity.super.onBackPressed();
+                            destroyActivity();
                         }
                     })
                     .setNegativeButton(android.R.string.no, null)
                     .show();
         }
+    }
+
+    private void destroyActivity() {
+        this.finish();
     }
 
     @Override
@@ -121,29 +126,25 @@ public class MainActivity extends AppCompatActivity
     public boolean onNavigationItemSelected(MenuItem item) {
         int id = item.getItemId();
         ActionBar actionBar = getSupportActionBar();
-        Fragment fragment = lastFragment;
+        Fragment fragment = null;
 
         try {
             if (id == R.id.nav_map) {
-                fragment = MapFragment.class.newInstance();
+                fragment = new MapFragment();
                 if (actionBar != null) actionBar.setTitle(R.string.title_activity_map);
             } else if (id == R.id.nav_radiomap) {
                 Log.d(TAG, "loading radiomap");
                 fragment = new RadiomapFragment();
-
                 if (actionBar != null) actionBar.setTitle(R.string.title_fragment_radiomap);
-            } else if (id == R.id.nav_data) {
-                fragment = RssiFragment.class.newInstance();
             } else if (id == R.id.nav_settings) {
                 startActivity(new Intent(this, SettingsActivity.class));
                 return true;
             }
 
-            FragmentManager fragmentManager = getSupportFragmentManager();
-            //fragmentManager.beginTransaction().remove(lastFragment).commit();
-            fragmentManager.beginTransaction().replace(R.id.flContent, fragment).commit();
-
-            lastFragment = fragment;
+            if (fragment != null) {
+                FragmentManager fragmentManager = getSupportFragmentManager();
+                fragmentManager.beginTransaction().replace(R.id.flContent, fragment).commit();
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -161,4 +162,8 @@ public class MainActivity extends AppCompatActivity
         Log.d("drone", "main destroyed.");
         super.onDestroy();
     }
+
+
+
+
 }

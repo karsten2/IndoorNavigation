@@ -88,6 +88,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     menuDroneConnectionState.setIcon(R.drawable.ic_drone_connected);
                 } else {
                     menuDroneConnectionState.setIcon(R.drawable.ic_drone_disconnected);
+                    droneController.removeListener(mDroneControllerListener);
                 }
             }
         }
@@ -138,7 +139,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         droneController = ((MainActivity) getActivity()).mDroneController;
         droneController.setListener(mDroneControllerListener);
-        //droneController.estimatePosition = true;
+        droneController.estimatePosition = true;
 
         View view = inflater.inflate(R.layout.fragment_map, container, false);
 
@@ -426,4 +427,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         if (actionBar != null)
             actionBar.setTitle(text);
     }
+
+
 }

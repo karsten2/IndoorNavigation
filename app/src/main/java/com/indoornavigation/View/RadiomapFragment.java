@@ -56,7 +56,6 @@ import com.indoornavigation.Database.SQLiteDBHelper;
 import com.indoornavigation.Helper.MapUtils;
 import com.indoornavigation.Helper.ScanResultComparator;
 import com.indoor.navigation.indoornavigation.R;
-import com.indoornavigation.Helper.Utils;
 import com.indoornavigation.Math.Statistics;
 import com.indoornavigation.Model.BaseStation;
 import com.indoornavigation.Model.MeasuringPoint;
@@ -93,12 +92,15 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
     private boolean write = false;
     private boolean write2 = false;
 
+    private DroneController droneController;
+
     private TextView tvBearing;
     private Spinner spinner;
     private BsAdapterCheckbox bsAdapterCheckbox;
     private SQLiteDBHelper db;
 
     private Marker mMarkerDronePosition;
+    private Marker lastSelectedMarker;
 
     private String lastSelectedLength;
     private int lastSelectedItem = -1;
@@ -158,6 +160,8 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
                     menuDroneConnectionState.setIcon(R.drawable.ic_drone_connected);
                 } else {
                     menuDroneConnectionState.setIcon(R.drawable.ic_drone_disconnected);
+
+                    droneController.removeListener(droneListener);
                 }
             }
         }
@@ -185,15 +189,14 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
 
             if (write2) {
                 String data = "";
-                data += String.valueOf(Utils.getPrefKnn(getContext()));
-                data += ";" + testPoints.get(temp2).getLatLng();
+                data += baseStations.size();
+                data += ";" + lastSelectedMarker.getPosition();
                 data += ";" + latLng;
                 data += ";" + SphericalUtil.computeDistanceBetween(
-                        testPoints.get(temp2).getLatLng(), latLng);
+                        lastSelectedMarker.getPosition(), latLng);
                 data += "\n";
                 try {
-                    Log.d(TAG, "Point: " + testPoints.get(temp2).getName());
-                    writeData(data);
+                    bw.write(data);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -271,34 +274,12 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
             fabData.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if (temp2 == -1) {
-                        Toast.makeText(getContext(), "Starte test", Toast.LENGTH_SHORT).show();
-                        try {
-                            bw = getCsvWriter(String.valueOf(
-                                    Utils.getPrefKnn(getContext())) + "_route_" + String.valueOf(_bearing).substring(0, 4));
-                        } catch (IOException e) {
-                            Log.e(TAG, e.getMessage());
-                        }
-                        temp2 ++;
-                        write2 = true;
-                    } else {
-                        temp2 ++;
-                        Toast.makeText(getContext(), "Point: " + temp2, Toast.LENGTH_SHORT).show();
-
-                        if (temp2 == testPoints.size()) {
-                            Toast.makeText(getContext(), "Test beendet", Toast.LENGTH_SHORT).show();
-                            write2 = false;
-                            temp2 = -1;
-                            try {
-                                bw.close();
-                            } catch (IOException e) {
-                                Log.e(TAG, e.getMessage());
-                            }
-                        }
+                    try {
+                        bw = getCsvWriter(lastSelectedMarker.getTitle());
+                        launchBarDialog2(150);
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
-
-
-                    //launchBarDialog2(150);
                 }
             });
         }
@@ -316,7 +297,7 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
     public void onResume() {
         super.onResume();
 
-        DroneController droneController = ((MainActivity) getActivity()).mDroneController;
+        droneController = ((MainActivity) getActivity()).mDroneController;
         droneController.setListener(droneListener);
         droneController.estimatePosition = true;
     }
@@ -811,6 +792,8 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
     GoogleMap.OnMarkerClickListener markerClickListener = new GoogleMap.OnMarkerClickListener() {
         @Override
         public boolean onMarkerClick(final Marker marker) {
+            lastSelectedMarker = marker;
+
             if (marker.getTitle().equals(selectedMarker)) {
                 AlertDialog.Builder dialog = new AlertDialog.Builder(getContext());
                 dialog.setTitle("Marker Löschen");
@@ -932,13 +915,13 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
      */
     private BufferedWriter getCsvWriter(String fileTag) throws IOException {
         String baseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
-        String fileName = "AnalysisData_knn_" + fileTag + ".csv";
+        String fileName = "lat_" + fileTag + ".csv";
         String filePath = baseDir + "/" + File.separator + fileName;
         File f = new File(filePath);
 
         FileWriter fw = new FileWriter(f, true);
         bw = new BufferedWriter(fw);
-        String fileHeader = "KNN;tatsächliche Position;berechnete Position;Distanz\n";
+        String fileHeader = "#bs;tatsächliche Position;berechnete Position;Distanz\n";
         bw.write(fileHeader);
 
         return bw;
@@ -961,12 +944,13 @@ public class RadiomapFragment extends Fragment implements OnMapReadyCallback {
             public void onDismiss(DialogInterface dialog) {
                 write2 = false;
                 try {
-                    bw.close();
+                    if (bw != null)
+                        bw.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    Log.e(TAG, e.getMessage());
                 }
                 dialog.dismiss();
-                Toast.makeText(getContext(), "Aufzeichnung abgebrochen", Toast.LENGTH_SHORT);
+                Toast.makeText(getContext(), "Aufzeichnung abgebrochen", Toast.LENGTH_SHORT).show();
             }
         });
 

@@ -2,6 +2,7 @@ package com.indoornavigation.Controller;
 
 import android.content.Context;
 import android.os.AsyncTask;
+import android.os.Debug;
 import android.os.Handler;
 import android.util.Log;
 import android.widget.Toast;
@@ -31,6 +32,7 @@ import com.parrot.arsdk.ardiscovery.ARDiscoveryDeviceService;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ThreadFactory;
 
 /**
  * Class that handles all drone events and inputs.
@@ -58,11 +60,15 @@ public class DroneController {
     private Statistics droneStatisticsLat = new Statistics(20);
     private Statistics droneStatisticsLng = new Statistics(20);
 
+    private LatLng target;
+
     private EstimatePosition estimatePositionTask;
 
     private List<Listener> mListener;
 
     public boolean estimatePosition = false;
+
+    private Handler mHandler;
 
     // Load native libraries, mandatory!
     static {
@@ -169,6 +175,8 @@ public class DroneController {
         droneDiscoverer.setup();
         droneDiscoverer.addListener(mDiscovererListener);
         droneDiscoverer.startDiscovering();
+
+        mHandler = new Handler(context.getMainLooper());
     }
 
     private Handler handler = new Handler();
@@ -284,9 +292,15 @@ public class DroneController {
         }
 
         @Override
-        public void onWifiScanListChanged(ArrayList<BaseStation> baseStations) {
-            notifyWifiScanlistChanged(new ArrayList<>(baseStations));
-            Log.d(TAG, "wifi found: " +baseStations.size());
+        public void onWifiScanListChanged(final ArrayList<BaseStation> baseStations) {
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    notifyWifiScanlistChanged(new ArrayList<>(baseStations));
+                }
+            });
+
+            //Log.d(TAG, "wifi found: " + baseStations.size());
 
             if (estimatePosition) {
                 if (estimatePositionTask == null ||
@@ -305,7 +319,7 @@ public class DroneController {
 
         @Override
         public void onPositionChanged(double latitude, double longitude, double altitude) {
-            //Log.d(TAG, currentPositionGPS.toString());
+            Log.d(TAG, "Current Position: " + currentPosition);
         }
     };
 
@@ -321,9 +335,9 @@ public class DroneController {
      * Function to move the connected drone.
      * pitch Forward/ backward angle of the drone. Value in percentage from -100 to 100.
      * flag 1 if the pitch and roll values should be used, 0 otherwise.
-     * <p>
+     * <p/>
      * The drone is moved forward, until the coordinates of the drone matches the destination.
-     * <p>
+     * <p/>
      * This function should be started async.
      *
      * @param destination the drone should fly.
@@ -335,7 +349,7 @@ public class DroneController {
             final double toleranceDistance = 1;
 
             while (SphericalUtil.computeDistanceBetween(
-                    currentPosition, destination) > toleranceDistance) ;
+                    getCurrentPosition(), destination) > toleranceDistance) ;
 
             mBebopDrone.setPitch((byte) 0);
             mBebopDrone.setFlag((byte) 0);
@@ -393,6 +407,15 @@ public class DroneController {
      */
     public void EmergencyLand() {
         this.autonomousFlight = false;
+
+        stopMove();
+
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
         this.droneLand();
     }
 
@@ -420,9 +443,10 @@ public class DroneController {
 
                         double distance = -1;
                         try {
-                            if (temp.getRss1_1m() != 1 && temp.getLat_const() != -1)
+                            /*if (temp.getRss1_1m() != 1 && temp.getLat_const() != -1)
                                 distance = MathUtils.distance(
-                                        temp.getRssi(), temp.getRss1_1m(), temp.getLat_const());
+                                        temp.getRssi(), temp.getRss1_1m(), temp.getLat_const());*/
+                            distance = MathUtils.distanceFSPL(temp.getRssi(), 2412);
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -449,17 +473,14 @@ public class DroneController {
                 }
             }
             LatLng newPosition = Trilateration.calculatePosition(foundBaseStations);
-            if (!newPosition.equals(new LatLng(0, 0)) && !newPosition.equals(currentPosition)) {
+            if (!newPosition.equals(new LatLng(0, 0)) && !newPosition.equals(getCurrentPosition())) {
 
                 droneStatisticsLat.add(newPosition.latitude);
                 droneStatisticsLng.add(newPosition.longitude);
-                currentPosition = new LatLng(droneStatisticsLat.getMean(), droneStatisticsLng.getMean());
+                setCurrentPosition(new LatLng(droneStatisticsLat.getMean(), droneStatisticsLng.getMean()));
                 return true;
             }
-            Log.d("drone",
-                    "\nwifi found: " + baseStations.size()
-                            + "\nwifi in db found: " + foundBaseStations.size()
-                            + "\ncalculated Position: " + currentPosition.toString());
+            Log.d(TAG, "Position: " + currentPosition);
         } catch (Exception e) {
             //Log.e(TAG, e.getMessage());
         }
@@ -538,15 +559,20 @@ public class DroneController {
                 else
                     newPosition = averageLatLng(vectorDifferences.subList(0, N));
 
-                if (!newPosition.equals(new LatLng(0, 0)) && !newPosition.equals(currentPosition)) {
+                if (!newPosition.equals(new LatLng(0, 0)) && !newPosition.equals(getCurrentPosition())) {
 
                     droneStatisticsLat.add(newPosition.latitude);
                     droneStatisticsLng.add(newPosition.longitude);
-                    currentPosition = new LatLng(
-                            droneStatisticsLat.getMean(), droneStatisticsLng.getMean());
+                    setCurrentPosition(new LatLng(droneStatisticsLat.getMean(),
+                            droneStatisticsLng.getMean()));
 
-                    //currentPosition = newPosition;
-                    Log.d("Drone", "Position: " + currentPosition);
+                    mHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            notifyPositionChanged(currentPosition);
+                        }
+                    });
+
                     return true;
                 }
             }
@@ -558,9 +584,9 @@ public class DroneController {
     /**
      * Function to get the average latlng coordinates out of n latlng values.
      * Used when knn returns k nearest neighbors.
-     *      lat values are summed up
-     *      lng values are summed up
-     *      divided by number of coordinates in vectorPair array.
+     * lat values are summed up
+     * lng values are summed up
+     * divided by number of coordinates in vectorPair array.
      *
      * @param vectorPairs Array with coordinates.
      * @return averaged latlng.
@@ -595,16 +621,34 @@ public class DroneController {
     public void startAutopilot(ArrayList<Marker> route) {
         this.route = route;
 
-        /*if (mBebopDrone != null && route.size() > 0) {
-            if (!droneIsFlying()) {
-                droneTakeOff();
-            }
-            autonomousFlight = true;
-        }*/
-
         if (mBebopDrone != null) {
-            autonomousFlight = true;
+            //autonomousFlight = true;
             droneTakeOff();
+
+
+            mBebopDrone.setFlag((byte) 0);
+
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                //e.printStackTrace();
+            }
+
+            Log.d(TAG, "start sinking");
+
+            mBebopDrone.setGaz((byte) -30);
+
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                //e.printStackTrace();
+            }
+
+            Log.d(TAG, "stopped sinking, starting autonomous task");
+
+            mBebopDrone.setGaz((byte) 0);
+
+            autonomousFlight = true;
         }
     }
 
@@ -612,114 +656,97 @@ public class DroneController {
      * Function is executed when autonomousFlight is true, and the drone entered hovering mode.
      */
     private void startAutopilot() {
-        //yawTask.execute(0);
-        new YawTaskTest().execute(90);
-
+        Log.d(TAG, "starting autopilot: " + route.size());
+        if (route.size() > 0) {
+            YawTask yawTask = new YawTask(route.get(0).getTitle(), route.get(0).getPosition());
+            yawTask.execute();
+        } else {
+            mBebopDrone.land();
+        }
     }
 
     /**
      * Function to turn the drone around the z-Axis for a specific angle.
-     * <p>
+     * <p/>
      * lat/lng: (0.0,1.0) atan2:     90.0
      * lat/lng: (1.0,0.0) atan2:     0.0
      * lat/lng: (-1.0,0.0)atan2:    -180.0
      * lat/lng: (0.0,-1.0)atan2:    -90.0
-     * <p>
-     *              90
-     *              |
-     *              |
+     * <p/>
+     * 90
+     * |
+     * |
      * +-180 _______|_______ 0
-     *              |
-     *              |
-     *              |
-     *             -90
-     * <p>
+     * |
+     * |
+     * |
+     * -90
+     * <p/>
      * Use modulo to get the correct degrees.
      * degrees = degrees % 360.
      * 0 to 180    will return the same numbers you put in.
      * -180 to -1  return values between 180 to 359 degrees.
-     * <p>
+     * <p/>
      * The function will find out the shortest way to turn the drone (left or right) to reach
      * the wanted bearing.
-     *
      */
-    AsyncTask yawTask = new AsyncTask<Void, Void, Marker>() {
+    private class YawTask extends AsyncTask<Void, Void, Void> {
+
+        private LatLng mLatLng;
+        private String mTitle;
+
+        public YawTask(String title, LatLng latLng) {
+            mLatLng = latLng;
+            mTitle = title;
+        }
+
         @Override
-        protected Marker doInBackground(Void... params) {
+        protected Void doInBackground(Void... params) {
             if (mBebopDrone != null && droneIsFlying() && route.size() > 0) {
-                final Marker marker = route.get(0);
-                Log.d(TAG, "Next target: " + marker.getPosition().toString());
-                final double bearing = SphericalUtil.computeHeading(
-                        currentPosition, marker.getPosition());
-                double startAngle = currentAttitudeYaw;
-                final double tolerance = 3.5;
-                final double result = (bearing % 360) - (startAngle % 360);
+                mBebopDrone.setFlag((byte) 0);
+                double bearing = SphericalUtil.computeHeading(
+                        getCurrentPosition(), mLatLng);
+                double tolerance = 3.5;
+                double result = bearing - currentAttitudeYaw;
 
-                Log.d(TAG, "droneYawTo: startAngle: " + currentAttitudeYaw + " destBearing: " + bearing
-                        + "result = " + result);
-
+                result += (result > 180) ? -360 : (result < -180) ? 360 : 0;
+                Log.d(TAG, "start yawing");
                 droneYaw(40 * (result < 0 ? -1 : 1));
 
                 while (!(currentAttitudeYaw >= bearing - tolerance
                         && currentAttitudeYaw <= bearing + tolerance)) {
                     try {
-                        Thread.sleep(100);
+                        Thread.sleep(200);
                     } catch (InterruptedException e) {
                         Log.e(TAG, e.getMessage());
                     }
                 }
 
-                Log.d(TAG, "Drone yawed for: " + result);
-
-                // end turning.
                 droneYaw(0);
-
-                return marker;
+                Log.d(TAG, "End yawing");
             }
+
             return null;
         }
 
         @Override
-        protected void onPostExecute(Marker marker) {
-            moveTask.execute(marker);
-            super.onPostExecute(marker);
-        }
-    };
-
-    AsyncTask moveTask = new AsyncTask<Marker, Void, Marker>() {
-        @Override
-        protected Marker doInBackground(Marker... markers) {
-            Marker destination = (Marker) markers[0];
-            dronePitch(30, 1);
-            final double toleranceDistance = 1;
-
-            while (SphericalUtil.computeDistanceBetween(
-                    currentPosition, destination.getPosition()) > toleranceDistance) {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    Log.e(TAG, e.getMessage());
-                }
-            }
-
-            dronePitch(0, 0);
-
-            return destination;
+        protected void onPostExecute(Void aVoid) {
+            super.onPostExecute(aVoid);
+            target = mLatLng;
+            startMove();
         }
 
-        @Override
-        protected void onPostExecute(Marker marker) {
-            super.onPostExecute(marker);
+    }
 
-            route.remove(marker);
+    private void startMove() {
+        Log.d(TAG, "start moving");
+        dronePitch(5, 1);
+    }
 
-            if (route.size() > 0)
-                yawTask.execute();
-            else
-                droneLand();
-        }
-    };
-
+    private void stopMove() {
+        Log.d(TAG, "stop moving");
+        dronePitch(0, 0);
+    }
 
     private boolean droneIsFlying() {
         if (mBebopDrone != null) {
@@ -772,8 +799,8 @@ public class DroneController {
      * Function to get the modulo, without getting negative values.
      *
      * @param dividend Dividend.
-     * @param divisor Divisor.
-     * @return modulo. 
+     * @param divisor  Divisor.
+     * @return modulo.
      */
     private double mod(double dividend, int divisor) {
         if (dividend >= 0)
@@ -782,89 +809,17 @@ public class DroneController {
             return (((dividend % divisor) + divisor) % divisor);
     }
 
-    private class YawTaskTest extends AsyncTask {
-        @Override
-        protected Object doInBackground(Object[] params) {
-            if (mBebopDrone != null && droneIsFlying()) {
-                final double tolerance = 7.5;
-                double start = -180;
-
-                while (true) {
-                    double result = start - currentAttitudeYaw;
-                    result += (result>180) ? -360 : (result< -180) ? 360 : 0;
-                    droneYaw(40 * (result < 0 ? -1 : 1));
-
-                    while (!(currentAttitudeYaw >= start - tolerance
-                            && currentAttitudeYaw <= start + tolerance)) {
-                        try {
-                            Thread.sleep(50);
-
-                        } catch (InterruptedException e) {
-                            Log.e(TAG, e.getMessage());
-                        }
-                    }
-                    // end turning.
-                    droneYaw(0);
-
-                    try {
-                        Thread.sleep(2000);
-                    } catch (InterruptedException e) {
-                        Log.e(TAG, e.getMessage());
-                    }
-
-                    if (start == 180) start = -180;
-                    start += 90;
-                }
-
-            }
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Object o) {
-            super.onPostExecute(o);
-
-            new MoveTaskTest().execute(o);
-        }
-    }
-
-    private class MoveTaskTest extends AsyncTask {
-        @Override
-        protected Object doInBackground(Object[] params) {
-            dronePitch(20, 1);
-
-            try {
-                Thread.sleep(3000);
-            } catch (InterruptedException e) {
-                Log.e(TAG, e.getMessage());
-            }
-
-            dronePitch(0, 0);
-
-            //droneLand();
-
-            return params[0];
-        }
-
-        @Override
-        protected void onPostExecute(Object o) {
-            super.onPostExecute(o);
-
-            new YawTaskTest().execute(o);
-        }
-    }
-
     private class EstimatePosition extends AsyncTask<ArrayList<BaseStation>, Void, Boolean> {
         @SafeVarargs
         @Override
         protected final Boolean doInBackground(ArrayList<BaseStation>... baseStations) {
             if (baseStations != null && baseStations[0] != null) {
                 try {
-                    switch (Utils.getPrefPositioningMethod(context)){
+                    switch (Utils.getPrefPositioningMethod(context)) {
                         case 1:
                             return getPositionFromRSS(new ArrayList<>(baseStations[0]));
                         case 2:
-                            return getPositionFromRadiomap(baseStations[0]);
+                            return getPositionFromRadiomap(new ArrayList<>(baseStations[0]));
                     }
                 } catch (Exception e) {
                     Log.e("estimate position", " " + e.getMessage());
@@ -876,8 +831,46 @@ public class DroneController {
         @Override
         protected void onPostExecute(Boolean notify) {
             super.onPostExecute(notify);
-            if (notify != null && notify)
-                notifyPositionChanged(currentPosition);
+            if (notify != null && notify) {
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        //notifyPositionChanged(currentPosition);
+                    }
+                });
+            }
+        }
+    }
+
+    public LatLng getCurrentPosition() {
+        return currentPosition;
+    }
+
+    public void setCurrentPosition(LatLng currentPosition) {
+        this.currentPosition = currentPosition;
+
+        if (target != null) {
+            double toleranceDistance = 1.25;
+            Log.d(TAG, "Distanz: " + SphericalUtil.computeDistanceBetween(
+                    getCurrentPosition(), target));
+            if (SphericalUtil.computeDistanceBetween(
+                    getCurrentPosition(), target) <= toleranceDistance) {
+
+                stopMove();
+
+                target = null;
+
+                if (route.size() > 0)
+                    route.remove(0);
+
+                if (route.size() > 0) {
+                    YawTask yawTask = new YawTask(route.get(0).getTitle(),
+                            new LatLng(route.get(0).getPosition().latitude,
+                                    route.get(0).getPosition().longitude));
+                    yawTask.execute();
+                } else
+                    droneLand();
+            }
         }
     }
 }
